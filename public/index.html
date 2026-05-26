@@ -11,7 +11,7 @@
         } catch (e) {}
     </script>
     <title>Sweepy改二</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=25">
 
 </head>
 <body>
@@ -56,6 +56,7 @@
         <main class="main-container">
             <div id="login-view" class="login-wrapper">
                 <div class="login-panel">
+                    <div id="last-session-banner" class="last-session-banner" style="display:none"></div>
                     <form id="login-form" autocomplete="on">
                         <div id="standard-fields">
                             <div class="form-group">
@@ -131,6 +132,60 @@
                                         <input id="preset-skill-threshold" class="form-input master-data-input preset-input" type="number">
                                     </div>
                                 </div>
+
+                                <div class="preset-control-row stat-bounds-row">
+                                    <div class="stat-bounds-block">
+                                        <div class="stat-bounds-title">MIN STATS (boost training under floor)</div>
+                                        <div class="stat-bounds-grid">
+                                            <label class="stat-bounds-cell"><span>SPD</span><input id="preset-min-speed" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                            <label class="stat-bounds-cell"><span>STA</span><input id="preset-min-stamina" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                            <label class="stat-bounds-cell"><span>PWR</span><input id="preset-min-power" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                            <label class="stat-bounds-cell"><span>GUT</span><input id="preset-min-guts" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                            <label class="stat-bounds-cell"><span>WIT</span><input id="preset-min-wit" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                        </div>
+                                    </div>
+                                    <div class="stat-bounds-block">
+                                        <div class="stat-bounds-title">MAX STATS (stop training at cap)</div>
+                                        <div class="stat-bounds-grid">
+                                            <label class="stat-bounds-cell"><span>SPD</span><input id="preset-max-speed" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                            <label class="stat-bounds-cell"><span>STA</span><input id="preset-max-stamina" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                            <label class="stat-bounds-cell"><span>PWR</span><input id="preset-max-power" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                            <label class="stat-bounds-cell"><span>GUT</span><input id="preset-max-guts" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                            <label class="stat-bounds-cell"><span>WIT</span><input id="preset-max-wit" class="form-input master-data-input preset-input stat-bounds-input" type="number" min="0" max="1200" step="50"></label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="uma-moe-import">
+                                    <div class="uma-moe-import-head">
+                                        <span class="uma-moe-import-title">IMPORT FROM UMA.MOE</span>
+                                        <a class="uma-moe-import-link" href="https://uma.moe/database" target="_blank" rel="noopener noreferrer">database &#8599;</a>
+                                    </div>
+                                    <div class="uma-moe-import-row uma-moe-search-row">
+                                        <select id="uma-moe-search-chara" class="form-input master-data-input preset-input" aria-label="Filter trainers by uma">
+                                            <option value="">— pick a uma —</option>
+                                        </select>
+                                        <button id="uma-moe-search-btn" class="btn btn-sm" type="button" disabled>SEARCH</button>
+                                    </div>
+                                    <div class="uma-moe-search-sort-row">
+                                        <span class="uma-moe-search-sort-label">SORT</span>
+                                        <button class="btn btn-sm uma-moe-sort-btn is-active" type="button" data-sort-key="score">SCORE</button>
+                                        <button class="btn btn-sm uma-moe-sort-btn" type="button" data-sort-key="g1">G1 WINS</button>
+                                        <button class="btn btn-sm uma-moe-sort-btn" type="button" data-sort-key="date">CAREER DATE</button>
+                                        <button id="uma-moe-sort-dir-btn" class="btn btn-sm" type="button" data-sort-dir="desc">DESC</button>
+                                    </div>
+                                    <div id="uma-moe-search-status" class="uma-moe-import-status"></div>
+                                    <div id="uma-moe-search-results" class="uma-moe-search-results" style="display:none;"></div>
+                                    <div class="uma-moe-import-divider" aria-hidden="true">or paste a trainer id</div>
+                                    <div class="uma-moe-import-row">
+                                        <input id="uma-moe-trainer-id" class="form-input master-data-input preset-input" type="text" inputmode="numeric" placeholder="trainer id (e.g. 636946328733)" autocomplete="off">
+                                        <button id="uma-moe-preview-btn" class="btn btn-sm" type="button">PREVIEW</button>
+                                        <button id="uma-moe-import-btn" class="btn btn-sm btn-primary" type="button" disabled>IMPORT</button>
+                                    </div>
+                                    <div id="uma-moe-status" class="uma-moe-import-status"></div>
+                                    <div id="uma-moe-preview" class="uma-moe-preview" style="display:none;"></div>
+                                </div>
+
                                 <button id="preset-edit-skills-btn" class="btn btn-sm preset-wide-btn" type="button">CONFIGURE SKILLS (PRIORITIES & BLACKLIST)</button>
                             </div>
                         </section>
@@ -167,7 +222,19 @@
                         </section>
 
                         <div class="start-panel">
+                            <div class="event-boost-row">
+                                <label class="event-boost-toggle">
+                                    <input id="event-boost-checkbox" type="checkbox">
+                                    <span class="event-boost-label">EVENT BOOST <em>(TP USAGE x2)</em></span>
+                                </label>
+                                <div class="event-boost-id">
+                                    <label for="event-boost-event-id" class="event-boost-id-label">STORY EVENT ID</label>
+                                    <input id="event-boost-event-id" class="form-input event-boost-input" type="number" min="0" step="1" inputmode="numeric" placeholder="0" autocomplete="off">
+                                </div>
+                                <div id="event-boost-status" class="event-boost-status"></div>
+                            </div>
                             <button id="start-career-btn" class="btn btn-primary" type="button" disabled>RUN CAREER</button>
+                            <div id="advisor-panel" class="advisor-panel"></div>
                             <div id="start-status" class="start-status"></div>
                         </div>
                     </div>
@@ -183,6 +250,13 @@
                                 DECKS
                             </h2>
                             <div id="decks-body" class="collapsible-body expanded">
+                                <div class="deck-toolbar">
+                                    <button id="deck-editor-new-btn" class="btn btn-sm" type="button">NEW SWEEPY DECK</button>
+                                    <button id="deck-editor-save-btn" class="btn btn-sm btn-primary" type="button" disabled>SAVE DECK</button>
+                                    <input id="deck-editor-name" class="form-input deck-editor-name" type="text" maxlength="80" placeholder="Deck name">
+                                    <div id="deck-editor-status" class="friend-status"></div>
+                                </div>
+                                <div id="deck-editor-panel" class="deck-editor-panel" style="display:none"></div>
                                 <div id="deck-list"></div>
                             </div>
                         </section>
@@ -195,6 +269,16 @@
                             <div id="friends-body" class="collapsible-body expanded">
                                 <div class="friend-toolbar">
                                     <div id="friend-status" class="friend-status">Loading friends...</div>
+                                    <div id="friend-manage-status" class="friend-status"></div>
+                                </div>
+                                <div class="friend-manage-panel">
+                                    <div class="friend-manage-row">
+                                        <input id="friend-id-input" class="form-input friend-id-input" type="text" inputmode="numeric" placeholder="friend / trainer id" autocomplete="off">
+                                        <button id="friend-preview-btn" class="btn btn-sm" type="button">PREVIEW</button>
+                                        <button id="friend-follow-id-btn" class="btn btn-sm btn-primary" type="button">FOLLOW</button>
+                                    </div>
+                                    <div id="friend-preview-panel" class="friend-preview-panel"></div>
+                                    <div id="friend-follow-list" class="friend-follow-list"></div>
                                 </div>
                                 <div id="friend-grid" class="data-grid"></div>
                             </div>
@@ -218,6 +302,19 @@
                             </div>
                         </section>
                         <section class="dashboard-section">
+                            <h2 class="dashboard-section-title section-title-toggle" id="friend-vets-toggle">
+                                <span class="collapse-chevron expanded" id="friend-vets-chevron">&#9658;</span>
+                                FRIEND PARENTS (BORROW) <span id="friend-vet-count"></span>
+                                <button id="friend-vet-refresh-btn" class="btn btn-sm section-title-action" type="button">REFRESH</button>
+                            </h2>
+                            <div id="friend-vets-body" class="collapsible-body expanded">
+                                <div class="friend-toolbar">
+                                    <div id="friend-vet-status" class="friend-status">Not loaded</div>
+                                </div>
+                                <div id="friend-vet-grid" class="data-grid"></div>
+                            </div>
+                        </section>
+                        <section class="dashboard-section">
                             <h2 class="dashboard-section-title section-title-toggle" id="cards-toggle">
                                 <span class="collapse-chevron" id="cards-chevron">&#9658;</span>
                                 OWNED CARDS <span id="card-count"></span>
@@ -236,11 +333,15 @@
         </main>
         <div id="career-modal" class="modal-backdrop">
             <div class="modal-panel">
-                <div class="modal-title">Delete Career?</div>
-                <div id="career-modal-copy" class="modal-copy">This will force-delete the ongoing career.</div>
+                <div id="career-modal-title" class="modal-title">Manage Career</div>
+                <div id="career-modal-copy" class="modal-copy">
+                    <strong>FINISH</strong>: spends leftover SP on skills then saves the trained character so you can start a new run.<br>
+                    <strong>DELETE</strong>: aborts the current career without saving (force delete).
+                </div>
                 <div class="modal-actions">
                     <button id="career-cancel-btn" type="button" class="btn btn-sm">CANCEL</button>
                     <button id="career-delete-btn" type="button" class="btn btn-sm btn-danger">DELETE</button>
+                    <button id="career-finish-btn" type="button" class="btn btn-sm btn-primary">FINISH</button>
                 </div>
             </div>
         </div>
@@ -285,7 +386,7 @@
             </div>
         </div>
     </div>
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=25"></script>
 </body>
 </html>
 

@@ -4,3 +4,20 @@
 /tools
 /scraped game logs
 career_bot/.timing_dna
+data/.session_cache.json
+data/.session_cache.json.tmp
+data/.backups/
+
+# Large binaries shouldn't live in git
+frida-server-*.exe
+
+# User-local data (decks, throwaway test presets, raw uma.moe imports)
+data/decks.json
+data/presets/1.json
+data/presets/TEST.json
+data/presets/uma.moe*.json
+
+# Raw YouTube captions / transcripts (keep synthesised .md guides only)
+data/uma_guides/*/
+!data/uma_guides/*.md
+

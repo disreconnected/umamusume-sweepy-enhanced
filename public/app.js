@@ -4,8 +4,10 @@ const state = {
     isLoading: false,
     account: null,
     isDeletingCareer: false,
+    isFinishingCareer: false,
     isFetchingFriends: false,
     isStartingCareer: false,
+    umaMoeCharas: null,
     presets: [],
     selectedPreset: "",
     runnerTimer: 0,
@@ -14,9 +16,20 @@ const state = {
     selectedRaces: [],
     scenarioType: "Mant",
     burnClocks: false,
+    umaMoeSearchResults: [],
+    umaMoeSearchTotal: 0,
+    umaMoeSearchCharaName: "",
+    umaMoeSortKey: "score",
+    umaMoeSortDir: "desc",
     displayedClocksUsed: 0,
     devEnabled: false,
-    consecutiveRunnerFails: 0
+    consecutiveRunnerFails: 0,
+    lastSessionCache: null,
+    isRefillingTp: false,
+    deckEditor: { open: false, id: "", name: "", cards: [], inspectCard: null },
+    eventBoost: { enabled: false, story_event_id: 0, tp_multiplier: 2 },
+    isManagingFollow: false,
+    advisorRecommendations: []
 };
 const els = {
     loadingScreen: document.getElementById('loading-screen'),
@@ -31,6 +44,7 @@ const els = {
     burnClocksBtn: document.getElementById('burn-clocks-btn'),
     devBtn: document.getElementById('dev-career-btn'),
     loginView: document.getElementById('login-view'),
+    lastSessionBanner: document.getElementById('last-session-banner'),
     dashboardView: document.getElementById('dashboard-view'),
     errorMsg: document.getElementById('error-msg'),
     standardFields: document.getElementById('standard-fields'),
@@ -42,21 +56,45 @@ const els = {
     cardsChevron: document.getElementById('cards-chevron'),
     parentGrid: document.getElementById('parent-grid'),
     friendGrid: document.getElementById('friend-grid'),
+    friendVetGrid: document.getElementById('friend-vet-grid'),
+    friendVetCount: document.getElementById('friend-vet-count'),
+    friendVetStatus: document.getElementById('friend-vet-status'),
+    friendVetRefreshBtn: document.getElementById('friend-vet-refresh-btn'),
+    friendVetsToggle: document.getElementById('friend-vets-toggle'),
+    friendVetsChevron: document.getElementById('friend-vets-chevron'),
+    friendVetsBody: document.getElementById('friend-vets-body'),
     deckList: document.getElementById('deck-list'),
+    deckEditorNewBtn: document.getElementById('deck-editor-new-btn'),
+    deckEditorSaveBtn: document.getElementById('deck-editor-save-btn'),
+    deckEditorName: document.getElementById('deck-editor-name'),
+    deckEditorStatus: document.getElementById('deck-editor-status'),
+    deckEditorPanel: document.getElementById('deck-editor-panel'),
     umaCount: document.getElementById('uma-count'),
     cardCount: document.getElementById('card-count'),
     parentCount: document.getElementById('parent-count'),
     friendCount: document.getElementById('friend-count'),
     friendStatus: document.getElementById('friend-status'),
+    friendManageStatus: document.getElementById('friend-manage-status'),
     friendRefreshBtn: document.getElementById('friend-refresh-btn'),
+    friendIdInput: document.getElementById('friend-id-input'),
+    friendPreviewBtn: document.getElementById('friend-preview-btn'),
+    friendFollowIdBtn: document.getElementById('friend-follow-id-btn'),
+    friendPreviewPanel: document.getElementById('friend-preview-panel'),
+    friendFollowList: document.getElementById('friend-follow-list'),
+    advisorPanel: document.getElementById('advisor-panel'),
     presetSelect: document.getElementById('preset-select'),
     startCareerBtn: document.getElementById('start-career-btn'),
     startStatus: document.getElementById('start-status'),
+    eventBoostCheckbox: document.getElementById('event-boost-checkbox'),
+    eventBoostEventId: document.getElementById('event-boost-event-id'),
+    eventBoostStatus: document.getElementById('event-boost-status'),
     accountStrip: document.getElementById('account-strip'),
     careerModal: document.getElementById('career-modal'),
+    careerModalTitle: document.getElementById('career-modal-title'),
     careerModalCopy: document.getElementById('career-modal-copy'),
     careerCancelBtn: document.getElementById('career-cancel-btn'),
     careerDeleteBtn: document.getElementById('career-delete-btn'),
+    careerFinishBtn: document.getElementById('career-finish-btn'),
     raceToggle: document.getElementById('race-toggle'),
     raceChevron: document.getElementById('race-chevron'),
     raceBody: document.getElementById('race-body'),
@@ -75,6 +113,31 @@ const els = {
     presetRunningStyle: document.getElementById('preset-running-style'),
     presetSkillThreshold: document.getElementById('preset-skill-threshold'),
     presetEditSkillsBtn: document.getElementById('preset-edit-skills-btn'),
+    presetMinStats: {
+        speed: document.getElementById('preset-min-speed'),
+        stamina: document.getElementById('preset-min-stamina'),
+        power: document.getElementById('preset-min-power'),
+        guts: document.getElementById('preset-min-guts'),
+        wit: document.getElementById('preset-min-wit'),
+    },
+    presetMaxStats: {
+        speed: document.getElementById('preset-max-speed'),
+        stamina: document.getElementById('preset-max-stamina'),
+        power: document.getElementById('preset-max-power'),
+        guts: document.getElementById('preset-max-guts'),
+        wit: document.getElementById('preset-max-wit'),
+    },
+    umaMoeTrainerId: document.getElementById('uma-moe-trainer-id'),
+    umaMoePreviewBtn: document.getElementById('uma-moe-preview-btn'),
+    umaMoeImportBtn: document.getElementById('uma-moe-import-btn'),
+    umaMoeStatus: document.getElementById('uma-moe-status'),
+    umaMoePreview: document.getElementById('uma-moe-preview'),
+    umaMoeSearchChara: document.getElementById('uma-moe-search-chara'),
+    umaMoeSearchBtn: document.getElementById('uma-moe-search-btn'),
+    umaMoeSortBtns: Array.from(document.querySelectorAll('.uma-moe-sort-btn')),
+    umaMoeSortDirBtn: document.getElementById('uma-moe-sort-dir-btn'),
+    umaMoeSearchStatus: document.getElementById('uma-moe-search-status'),
+    umaMoeSearchResults: document.getElementById('uma-moe-search-results'),
     skillModal: document.getElementById('skill-modal'),
     skillSearch: document.getElementById('skill-search'),
     skillList: document.getElementById('skill-list'),
@@ -302,6 +365,7 @@ const els = {
         makeSectionToggle('friends-toggle',  'friends-chevron',  'friends-body',  true);
         makeSectionToggle('trainees-toggle', 'trainees-chevron', 'trainees-body', true);
         makeSectionToggle('parents-toggle',  'parents-chevron',  'parents-body',  true);
+        makeSectionToggle('friend-vets-toggle', 'friend-vets-chevron', 'friend-vets-body', true);
         makeSectionToggle('cards-toggle',    'cards-chevron',    'card-grid-wrapper', false);
         const applyTheme = theme => {
             const nextTheme = theme === 'blue' ? 'blue' : 'pink';
@@ -539,6 +603,7 @@ const els = {
             selection.friend = null;
             selection.trainee = null;
             selection.veterans = [];
+            selection.rentalParent = null;
         }
         function hideBrokenImage(img) {
             img.onerror = null;
@@ -596,27 +661,44 @@ const els = {
             resetSelection();
             syncDashboardHeight();
             loginForm.reset();
+            loadAndRenderSessionCache();
         });
 
         const formatNumber = value => Number(value || 0).toLocaleString();
+        const CAREER_MODAL_DEFAULT_COPY = '<strong>FINISH</strong>: spends leftover SP on skills then saves the trained character so you can start a new run.<br><strong>DELETE</strong>: aborts the current career without saving (force delete).';
+        function setCareerModalCopy(html) {
+            if (!els.careerModalCopy) return;
+            els.careerModalCopy.innerHTML = html;
+        }
         function closeCareerModal() {
             els.careerModal.style.display = 'none';
-            els.careerModalCopy.innerText = 'This will force-delete the ongoing career.';
+            setCareerModalCopy(CAREER_MODAL_DEFAULT_COPY);
             els.careerDeleteBtn.innerText = 'DELETE';
+            els.careerDeleteBtn.disabled = false;
+            if (els.careerFinishBtn) {
+                els.careerFinishBtn.innerText = 'FINISH';
+                els.careerFinishBtn.disabled = false;
+            }
             state.isDeletingCareer = false;
+            state.isFinishingCareer = false;
         }
         function openCareerModal() {
             const career = state.account && state.account.career;
             if (!career || !career.active) return;
-            els.careerModalCopy.innerText = 'This will force-delete the ongoing career.';
+            setCareerModalCopy(CAREER_MODAL_DEFAULT_COPY);
             els.careerModal.style.display = 'flex';
+        }
+        function lockCareerModalButtons() {
+            els.careerDeleteBtn.disabled = true;
+            if (els.careerFinishBtn) els.careerFinishBtn.disabled = true;
         }
         async function deleteCareer() {
             const career = state.account && state.account.career;
-            if (!career || !career.active || state.isDeletingCareer) return;
+            if (!career || !career.active || state.isDeletingCareer || state.isFinishingCareer) return;
             state.isDeletingCareer = true;
+            lockCareerModalButtons();
             els.careerDeleteBtn.innerText = 'DELETING';
-            els.careerModalCopy.innerText = 'Deleting ongoing career...';
+            setCareerModalCopy('Force-deleting ongoing career...');
             try {
                 const data = await apiJson('/api/career/delete', {
                     method: 'POST',
@@ -627,13 +709,48 @@ const els = {
                 renderAccountStrip(data.account);
                 closeCareerModal();
             } catch (e) {
-                els.careerModalCopy.innerText = e.message || 'Delete failed';
+                setCareerModalCopy(escapeHtml(e.message || 'Delete failed'));
                 els.careerDeleteBtn.innerText = 'RETRY';
+                els.careerDeleteBtn.disabled = false;
+                if (els.careerFinishBtn) els.careerFinishBtn.disabled = false;
                 state.isDeletingCareer = false;
+            }
+        }
+        async function finishCareer() {
+            const career = state.account && state.account.career;
+            if (!career || !career.active || state.isFinishingCareer || state.isDeletingCareer) return;
+            state.isFinishingCareer = true;
+            lockCareerModalButtons();
+            els.careerFinishBtn.innerText = 'FINISHING';
+            setCareerModalCopy('Buying remaining skills and saving the trained character...');
+            try {
+                const data = await apiJson('/api/career/finish', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        current_turn: career.turn || 0,
+                        preset_name: state.selectedPreset || '',
+                        buy_skills: true,
+                    })
+                });
+                if (!data.success) throw new Error(data.detail || 'Finish failed');
+                renderAccountStrip(data.account);
+                const skills = Number(data.skills_bought || 0);
+                const before = Number(data.sp_before || 0);
+                const after = Number(data.sp_after || 0);
+                setCareerModalCopy(`Career saved. Skills bought: <strong>${skills}</strong> · SP spent: <strong>${Math.max(0, before - after)}</strong> (was ${before}, now ${after}).`);
+                setTimeout(closeCareerModal, 1800);
+            } catch (e) {
+                setCareerModalCopy(escapeHtml(e.message || 'Finish failed'));
+                els.careerFinishBtn.innerText = 'RETRY';
+                els.careerFinishBtn.disabled = false;
+                els.careerDeleteBtn.disabled = false;
+                state.isFinishingCareer = false;
             }
         }
         els.careerCancelBtn.addEventListener('click', closeCareerModal);
         els.careerDeleteBtn.addEventListener('click', deleteCareer);
+        if (els.careerFinishBtn) els.careerFinishBtn.addEventListener('click', finishCareer);
         els.careerModal.addEventListener('click', event => {
             if (event.target === els.careerModal) closeCareerModal();
         });
@@ -683,10 +800,12 @@ const els = {
                     <strong>NONE</strong>
                 </div>`;
             const carrots = account.carrots || {};
+            const canRefillTp = !state.isRefillingTp && Number(tp.current || 0) < Number(tp.max || 0);
             els.accountStrip.innerHTML = `
                 <div class="account-pill pill-tp">
                     <span class="label">TP</span>
                     <strong>${tp.current || 0}/${tp.max || 0}</strong>
+                    <button id="tp-refill-btn" class="pill-mini-btn" type="button" ${canRefillTp ? '' : 'disabled'}>${state.isRefillingTp ? '...' : 'REFILL'}</button>
                 </div>
                 <div class="account-pill pill-carrots">
                     <span class="label">CARROTS</span>
@@ -705,8 +824,35 @@ const els = {
             els.accountStrip.style.display = 'flex';
             const careerPill = document.getElementById('career-pill');
             if (careerPill) careerPill.addEventListener('click', openCareerModal);
+            const tpRefillBtn = document.getElementById('tp-refill-btn');
+            if (tpRefillBtn) tpRefillBtn.addEventListener('click', refillTp);
             loadStoredBurnClocks();
             syncBurnClocksControls();
+        }
+
+        async function refillTp(event) {
+            if (event) event.stopPropagation();
+            if (state.isRefillingTp) return;
+            state.isRefillingTp = true;
+            renderAccountStrip(state.account);
+            try {
+                const data = await apiJson('/api/tp/refill', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to_max: true })
+                });
+                if (!data.success) throw new Error(data.detail || 'TP refill failed');
+                if (data.account) renderAccountStrip(data.account);
+            } catch (e) {
+                console.error('TP refill failed', e);
+                if (els.startStatus) {
+                    els.startStatus.innerText = e.message || 'TP refill failed';
+                    els.startStatus.classList.add('error');
+                }
+            } finally {
+                state.isRefillingTp = false;
+                renderAccountStrip(state.account);
+            }
         }
 
         els.burnClocksBtn.addEventListener('click', async () => {
@@ -729,6 +875,125 @@ const els = {
             }
         });
 
+        // ---- Event Boost (TP Usage x2) -------------------------------------------------
+        // Mirrors the in-game "Event Boost" checkbox. When enabled, the career start
+        // payload sets is_boost=1 + boost_story_event_id=<configured> and doubles
+        // use_tp so the backend's "not enough TP" guard matches the server-side cost.
+        const SCENARIO_BASE_TP_COST = 30;
+        let eventBoostSaveTimer = 0;
+        function syncEventBoostControls() {
+            if (!els.eventBoostCheckbox || !els.eventBoostEventId) return;
+            const cfg = state.eventBoost || { enabled: false, story_event_id: 0, tp_multiplier: 2 };
+            els.eventBoostCheckbox.checked = !!cfg.enabled;
+            const idStr = String(cfg.story_event_id || 0);
+            if (document.activeElement !== els.eventBoostEventId) {
+                els.eventBoostEventId.value = idStr === '0' ? '' : idStr;
+            }
+            renderEventBoostStatus();
+        }
+        function renderEventBoostStatus() {
+            if (!els.eventBoostStatus) return;
+            const cfg = state.eventBoost || {};
+            if (!cfg.enabled) {
+                els.eventBoostStatus.innerText = '';
+                els.eventBoostStatus.classList.remove('error', 'is-active');
+                return;
+            }
+            if (!cfg.story_event_id) {
+                els.eventBoostStatus.innerText = 'Set the story event ID to activate boost.';
+                els.eventBoostStatus.classList.remove('is-active');
+                els.eventBoostStatus.classList.add('error');
+                return;
+            }
+            const mult = Number(cfg.tp_multiplier || 2);
+            els.eventBoostStatus.innerText = `Boost ON · TP usage x${mult} (${SCENARIO_BASE_TP_COST * mult}/career) · event #${cfg.story_event_id}`;
+            els.eventBoostStatus.classList.remove('error');
+            els.eventBoostStatus.classList.add('is-active');
+        }
+        function resolveEventBoostForStart() {
+            const cfg = state.eventBoost || {};
+            const enabled = !!cfg.enabled && Number(cfg.story_event_id || 0) > 0;
+            const mult = Math.max(1, Number(cfg.tp_multiplier || 2));
+            return {
+                isBoost: enabled ? 1 : 0,
+                storyEventId: enabled ? Number(cfg.story_event_id) : 0,
+                useTp: enabled ? SCENARIO_BASE_TP_COST * mult : SCENARIO_BASE_TP_COST,
+            };
+        }
+        async function fetchEventBoostSettings() {
+            try {
+                const data = await apiJson('/api/settings/event-boost');
+                if (data && data.success) {
+                    state.eventBoost = {
+                        enabled: !!data.enabled,
+                        story_event_id: Number(data.story_event_id || 0),
+                        tp_multiplier: Number(data.tp_multiplier || 2),
+                    };
+                }
+            } catch (e) {
+                console.error('Failed to load event boost settings', e);
+            }
+            syncEventBoostControls();
+        }
+        async function saveEventBoostSettings() {
+            const cfg = state.eventBoost || {};
+            try {
+                const data = await apiJson('/api/settings/event-boost', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enabled: !!cfg.enabled,
+                        story_event_id: Number(cfg.story_event_id || 0),
+                    })
+                });
+                if (data && data.success) {
+                    state.eventBoost = {
+                        enabled: !!data.enabled,
+                        story_event_id: Number(data.story_event_id || 0),
+                        tp_multiplier: Number(data.tp_multiplier || 2),
+                    };
+                    syncEventBoostControls();
+                }
+            } catch (e) {
+                console.error('Failed to save event boost settings', e);
+            }
+        }
+        function queueEventBoostSave() {
+            if (eventBoostSaveTimer) clearTimeout(eventBoostSaveTimer);
+            eventBoostSaveTimer = setTimeout(() => {
+                eventBoostSaveTimer = 0;
+                saveEventBoostSettings();
+            }, 400);
+        }
+        if (els.eventBoostCheckbox) {
+            els.eventBoostCheckbox.addEventListener('change', () => {
+                state.eventBoost = {
+                    ...(state.eventBoost || {}),
+                    enabled: !!els.eventBoostCheckbox.checked,
+                };
+                renderEventBoostStatus();
+                saveEventBoostSettings();
+            });
+        }
+        if (els.eventBoostEventId) {
+            els.eventBoostEventId.addEventListener('input', () => {
+                const parsed = Math.max(0, Math.floor(Number(els.eventBoostEventId.value || 0)));
+                state.eventBoost = {
+                    ...(state.eventBoost || {}),
+                    story_event_id: parsed,
+                };
+                renderEventBoostStatus();
+                queueEventBoostSave();
+            });
+            els.eventBoostEventId.addEventListener('blur', () => {
+                if (eventBoostSaveTimer) {
+                    clearTimeout(eventBoostSaveTimer);
+                    eventBoostSaveTimer = 0;
+                    saveEventBoostSettings();
+                }
+            });
+        }
+
         const rankMap = {
             1: 'G', 2: 'G+', 3: 'F', 4: 'F+', 5: 'E', 6: 'E+',
             7: 'D', 8: 'D+', 9: 'C', 10: 'C+', 11: 'B', 12: 'B+',
@@ -736,7 +1001,7 @@ const els = {
             19: 'UG', 20: 'UF', 21: 'UE', 22: 'UD'
         };
         let dashData = null;
-        const selection = { deck: null, friend: null, trainee: null, veterans: [] };
+        const selection = { deck: null, friend: null, trainee: null, veterans: [], rentalParent: null };
 
         async function syncSelectionToServer() {
             try {
@@ -744,7 +1009,8 @@ const els = {
                     deck: selection.deck,
                     friend: selection.friend,
                     trainee: selection.trainee,
-                    veterans: selection.veterans
+                    veterans: selection.veterans,
+                    rentalParent: selection.rentalParent
                 };
                 await apiJson('/api/selection', {
                     method: 'POST',
@@ -772,6 +1038,11 @@ const els = {
                 }
                 selection.veterans.splice(idx, 1);
                 updateVetSelectability();
+            } else if (action === 'rental') {
+                selection.rentalParent = null;
+                syncFriendVeteranSelection();
+                savePresetRentalChara();
+                updateVetSelectability();
             }
             renderTeamPanel();
             syncSelectionToServer();
@@ -783,7 +1054,10 @@ const els = {
             if (!selection.deck) return 'Select a deck';
             if (!selection.friend) return 'Select a friend support';
             if (!selection.trainee) return 'Select a trainee';
-            if (selection.veterans.length < 2) return 'Select two parents';
+            const ownParentCount = selection.veterans.length;
+            const totalParentCount = ownParentCount + (selection.rentalParent ? 1 : 0);
+            if (ownParentCount < 1) return 'Select at least one parent';
+            if (totalParentCount < 2) return 'Select a second parent (own or borrowed)';
             const parentError = getParentSelectionError();
             if (parentError) return parentError;
             const tp = state.account && state.account.tp ? Number(state.account.tp.current || 0) : 0;
@@ -817,6 +1091,73 @@ const els = {
                 els.startStatus.innerText = reason;
                 els.startStatus.classList.toggle('error', false);
             }
+        }
+        function currentRunningStyle() {
+            const preset = getCurrentPreset();
+            return Number((preset && preset.running_style) || els.presetRunningStyle?.value || 0);
+        }
+        function selectedCandidateIds() {
+            const ids = new Set();
+            (selection.veterans || []).forEach(parent => {
+                if (parent && parent.instance_id) ids.add(`owned:${parent.instance_id}`);
+            });
+            const rental = selection.rentalParent;
+            if (rental && rental.viewer_id && rental.trained_chara_id) {
+                ids.add(`rental:${rental.viewer_id}:${rental.trained_chara_id}`);
+            }
+            return ids;
+        }
+        function renderAdvisorPanel() {
+            if (!els.advisorPanel) return;
+            const rows = state.advisorRecommendations || [];
+            if (!selection.trainee) {
+                els.advisorPanel.innerHTML = '<div class="advisor-muted">Select a trainee to score parent quality.</div>';
+                return;
+            }
+            if (!rows.length) {
+                els.advisorPanel.innerHTML = '<div class="advisor-muted">Parent advisor will appear after friend/parent data loads.</div>';
+                return;
+            }
+            const selectedIds = selectedCandidateIds();
+            const selectedRows = rows.filter(row => selectedIds.has(row.candidate_id));
+            const topRows = rows.slice(0, 5);
+            const selectedWarnings = selectedRows.flatMap(row => (row.advisor && row.advisor.warnings) || []);
+            const renderRow = row => {
+                const score = row.advisor ? row.advisor.score : 0;
+                const name = row.name || row.chara_name || row.trainer_name || 'Unknown';
+                const source = row.source === 'rental' ? 'borrow' : 'owned';
+                const reasons = ((row.advisor && row.advisor.reasons) || []).join(' · ');
+                return `<div class="advisor-row ${selectedIds.has(row.candidate_id) ? 'is-selected' : ''}">
+                    <span class="advisor-score">${Number(score || 0).toFixed(1)}</span>
+                    <span class="advisor-name">${escapeHtml(name)}</span>
+                    <span class="advisor-source">${escapeHtml(source)}</span>
+                    <span class="advisor-reason">${escapeHtml(reasons)}</span>
+                </div>`;
+            };
+            els.advisorPanel.innerHTML = `
+                <div class="advisor-title">Runtime Advisor</div>
+                ${selectedWarnings.length ? `<div class="advisor-warning">${Array.from(new Set(selectedWarnings)).map(escapeHtml).join(' · ')}</div>` : '<div class="advisor-ok">No obvious selected-parent warning.</div>'}
+                <div class="advisor-subtitle">Best parent candidates</div>
+                <div class="advisor-list">${topRows.map(renderRow).join('')}</div>
+            `;
+        }
+        async function updateAdvisorRecommendations() {
+            renderAdvisorPanel();
+            if (!dashData || !selection.trainee) return;
+            try {
+                const res = await apiJson('/api/advisor/recommendations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        trainee_card_id: Number(selection.trainee.id || 0),
+                        running_style: currentRunningStyle(),
+                    })
+                });
+                if (res.success) {
+                    state.advisorRecommendations = res.recommendations || [];
+                    renderAdvisorPanel();
+                }
+            } catch (e) {}
         }
         function renderTeamPanel() {
             document.getElementById('dashboard-view').classList.add('active');
@@ -887,11 +1228,28 @@ const els = {
                             </div>
                         </div>
                     `, 'vet', i, 'select parent');
-                } else {
-                    setSlot(id, `Parent ${i + 1}`, null, 'vet', i, 'select parent');
+                    return;
                 }
+                const rental = selection.rentalParent;
+                if (rental && i === 1) {
+                    const rentalName = rental.chara_name || rental.name || 'Unknown';
+                    const rentalRank = rental.rank ? (rankMap[rental.rank] || '??') : '';
+                    const trainer = rental.trainer_name ? ` &middot; ${escapeHtml(rental.trainer_name)}` : '';
+                    setSlot(id, `Parent ${i + 1}`, `
+                        <div class="team-item-body">
+                            <img class="team-item-portrait" src="/api/images/${rental.card_id || '100101'}.png" onerror="hideBrokenImage(this)">
+                            <div class="team-item-text">
+                                <span class="team-item-name">${escapeHtml(rentalName)} <span class="team-item-tag">borrowed</span></span>
+                                <span class="team-item-sub">${rentalRank}${trainer}</span>
+                            </div>
+                        </div>
+                    `, 'rental', null, 'select parent');
+                    return;
+                }
+                setSlot(id, `Parent ${i + 1}`, null, 'vet', i, 'select parent');
             });
             syncStartButton();
+            renderAdvisorPanel();
         }
                 function updateVetSelectability() {
             const full = selection.veterans.length >= 2;
@@ -972,6 +1330,67 @@ const els = {
             }
             if (selection.trainee && friendName && normalizedCardName(selection.trainee.name) === friendName) return false;
             return true;
+        }
+        function friendStateLabel(value) {
+            const stateId = Number(value || 0);
+            if (stateId >= 3) return 'mutual';
+            if (stateId === 2) return 'following';
+            if (stateId === 1) return 'follower';
+            return 'not followed';
+        }
+        function friendManageRows() {
+            const byViewer = new Map();
+            ((dashData && dashData.friends) || []).forEach(friend => {
+                const viewerId = String(friend.viewer_id || '');
+                if (!viewerId) return;
+                const existing = byViewer.get(viewerId);
+                const existingState = existing ? Number(existing.friend_state || 0) : -1;
+                if (!existing || Number(friend.friend_state || 0) >= existingState) {
+                    byViewer.set(viewerId, friend);
+                }
+            });
+            return Array.from(byViewer.values())
+                .filter(friend => Number(friend.friend_state || 0) > 0)
+                .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+        }
+        function renderFriendManageList() {
+            if (!els.friendFollowList) return;
+            const rows = friendManageRows();
+            if (!rows.length) {
+                els.friendFollowList.innerHTML = '<div class="friend-follow-list-empty">No loaded following/follower entries yet. Refresh friends after following someone.</div>';
+                return;
+            }
+            els.friendFollowList.innerHTML = `
+                <div class="friend-follow-list-title">Loaded relationships</div>
+                ${rows.map(friend => {
+                    const viewerId = escapeAttr(String(friend.viewer_id || ''));
+                    const name = escapeHtml(friend.name || `Trainer ${viewerId}`);
+                    const support = escapeHtml(friend.support_name || 'Unknown support');
+                    const relation = escapeHtml(friendStateLabel(friend.friend_state));
+                    return `<div class="friend-follow-row">
+                        <div class="friend-follow-row-main">
+                            <span class="friend-follow-row-name">${name}</span>
+                            <span class="friend-follow-row-meta">${viewerId} · ${support} · ${relation}</span>
+                        </div>
+                        <button class="btn btn-sm friend-follow-row-action" type="button" data-viewer-id="${viewerId}">UNFOLLOW</button>
+                    </div>`;
+                }).join('')}
+            `;
+            els.friendFollowList.querySelectorAll('.friend-follow-row-action').forEach(btn => {
+                btn.addEventListener('click', () => manageFollow('unfollow', Number(btn.dataset.viewerId || 0)));
+            });
+        }
+        function renderSupportDeckStrip(cardsOrIds, className = 'support-deck-strip') {
+            const cards = (cardsOrIds || []).map(item => {
+                if (item && typeof item === 'object') return item;
+                return { id: item };
+            }).filter(card => card && (card.id || card.support_card_id));
+            if (!cards.length) return '';
+            return `<div class="${className}">${cards.slice(0, 6).map(card => {
+                const id = card.id || card.support_card_id;
+                const title = escapeAttr(`${card.name || id} ${card.type ? '(' + card.type + ')' : ''}`);
+                return `<img src="/api/images/${escapeAttr(String(id))}.png" title="${title}" onerror="hideBrokenImage(this)">`;
+            }).join('')}</div>`;
         }
         function getVisibleFriends() {
             const friends = (dashData && dashData.friends) || [];
@@ -1082,7 +1501,11 @@ const els = {
         }
 
         function raceKeys(race) {
-            const keys = [race.id, ...(race.legacy_ids || [])];
+            // Presets may store any of: the full UI id (e.g. 100629), one of the
+            // legacy_ids (e.g. 2004), or the bare program_id (e.g. 629 — what the
+            // uma.moe importer writes). Treat all three as equivalent for selector
+            // highlighting and toggling.
+            const keys = [race.id, race.program_id, ...(race.legacy_ids || [])];
             return keys.map(id => parseInt(id)).filter(id => Number.isFinite(id));
         }
 
@@ -1512,6 +1935,29 @@ const els = {
             renderSkillEditorRightSide();
         }
 
+        const STAT_KEYS_ORDERED = ['speed', 'stamina', 'power', 'guts', 'wit'];
+        const STAT_MIN_DEFAULT = [0, 0, 0, 0, 0];
+        const STAT_MAX_DEFAULT = [1200, 1200, 1200, 1200, 1200];
+
+        function readStatInputs(inputs) {
+            return STAT_KEYS_ORDERED.map(k => {
+                const raw = inputs[k]?.value;
+                const n = parseInt(raw);
+                return Number.isFinite(n) ? Math.max(0, Math.min(1200, n)) : 0;
+            });
+        }
+
+        function writeStatInputs(inputs, values, defaults) {
+            const arr = Array.isArray(values) ? values : defaults;
+            STAT_KEYS_ORDERED.forEach((k, idx) => {
+                const el = inputs[k];
+                if (!el) return;
+                const fallback = defaults[idx] ?? 0;
+                const v = Number.isFinite(arr[idx]) ? arr[idx] : fallback;
+                el.value = v;
+            });
+        }
+
         async function savePresetConfig() {
             if (!state.selectedPreset || !state.presets) return;
             const current = getCurrentPreset();
@@ -1519,6 +1965,8 @@ const els = {
 
             current.learn_skill_threshold = parseInt(els.presetSkillThreshold.value) || 888;
             current.running_style = parseInt(els.presetRunningStyle?.value) || 1;
+            current.min_stats = readStatInputs(els.presetMinStats);
+            current.max_stats = readStatInputs(els.presetMaxStats);
 
             try {
                 await apiJson('/api/presets', {
@@ -1536,6 +1984,404 @@ const els = {
 
             els.presetSkillThreshold.value = current.learn_skill_threshold || 888;
             if (els.presetRunningStyle) els.presetRunningStyle.value = current.running_style || 1;
+            writeStatInputs(els.presetMinStats, current.min_stats, STAT_MIN_DEFAULT);
+            writeStatInputs(els.presetMaxStats, current.max_stats, STAT_MAX_DEFAULT);
+            clearUmaMoePreview();
+        }
+
+        const STYLE_NAMES = { 1: 'Front Runner', 2: 'Pace Chaser', 3: 'Late Surger', 4: 'End Closer' };
+
+        function clearUmaMoePreview() {
+            state.umaMoePendingPatch = null;
+            if (els.umaMoePreview) {
+                els.umaMoePreview.style.display = 'none';
+                els.umaMoePreview.innerHTML = '';
+            }
+            if (els.umaMoeImportBtn) els.umaMoeImportBtn.disabled = true;
+            setUmaMoeStatus('', '');
+        }
+
+        function setUmaMoeStatus(text, kind = '') {
+            if (!els.umaMoeStatus) return;
+            els.umaMoeStatus.textContent = text || '';
+            els.umaMoeStatus.classList.remove('is-error', 'is-ok');
+            if (kind === 'error') els.umaMoeStatus.classList.add('is-error');
+            else if (kind === 'ok') els.umaMoeStatus.classList.add('is-ok');
+        }
+
+        function normalizeTrainerId(raw) {
+            return String(raw || '').replace(/\D+/g, '').trim();
+        }
+        function normalizeFriendId(raw) {
+            return String(raw || '').replace(/\D+/g, '').trim();
+        }
+        function renderFriendPreview(html = '') {
+            if (!els.friendPreviewPanel) return;
+            els.friendPreviewPanel.innerHTML = html;
+            els.friendPreviewPanel.style.display = html ? '' : 'none';
+        }
+        async function previewFriendId() {
+            const viewerId = normalizeFriendId(els.friendIdInput?.value);
+            if (!viewerId) {
+                renderFriendPreview('<div class="friend-preview-error">Enter a numeric friend/trainer id first.</div>');
+                return;
+            }
+            const local = ((dashData && dashData.friends) || []).find(friend => String(friend.viewer_id) === viewerId);
+            if (local) {
+                renderFriendPreview(`
+                    <div class="friend-preview-card">
+                        <img src="/api/images/${escapeAttr(String(local.support_card_id || '10001'))}.png" onerror="hideBrokenImage(this)">
+                        <div>
+                            <div class="friend-preview-title">${escapeHtml(local.name || `Trainer ${viewerId}`)}</div>
+                            <div class="friend-preview-meta">${escapeHtml(viewerId)} · ${escapeHtml(friendStateLabel(local.friend_state))}</div>
+                            <div class="friend-preview-meta">${escapeHtml(local.support_name || 'Unknown support')} · ${escapeHtml(local.type || '?')} LB${local.limit_break_count ?? '?'}</div>
+                        </div>
+                    </div>
+                `);
+                return;
+            }
+            renderFriendPreview('<div class="friend-preview-loading">Looking up public uma.moe trainer profile...</div>');
+            try {
+                const res = await apiJson(`/api/uma-moe/trainer/${encodeURIComponent(viewerId)}`);
+                if (!res.success) throw new Error(res.detail || 'Preview failed');
+                const patch = res.patch || {};
+                const support = patch.friend_support || {};
+                renderFriendPreview(`
+                    <div class="friend-preview-card">
+                        <img src="/api/images/${escapeAttr(String(patch.trainee_card_id || support.support_card_id || '100101'))}.png" onerror="hideBrokenImage(this)">
+                        <div>
+                            <div class="friend-preview-title">${escapeHtml(patch.imported_trainer_name || `Trainer ${viewerId}`)}</div>
+                            <div class="friend-preview-meta">${escapeHtml(viewerId)} · uma.moe public profile</div>
+                            <div class="friend-preview-meta">${escapeHtml(patch.trainee_name || 'Unknown trainee')} · ${escapeHtml(STYLE_NAMES[patch.running_style] || '?')}</div>
+                            <div class="friend-preview-meta">Shared support: ${escapeHtml(support.name || 'unknown')}</div>
+                        </div>
+                    </div>
+                `);
+            } catch (e) {
+                renderFriendPreview(`<div class="friend-preview-error">No loaded friend/public preview found for ${escapeHtml(viewerId)}. You can still try FOLLOW.</div>`);
+            }
+        }
+        async function followFriendId() {
+            const viewerId = Number(normalizeFriendId(els.friendIdInput?.value) || 0);
+            if (!viewerId) {
+                renderFriendPreview('<div class="friend-preview-error">Enter a numeric friend/trainer id first.</div>');
+                return;
+            }
+            await manageFollow('follow', viewerId);
+        }
+
+        function renderUmaMoePreview(patch) {
+            if (!els.umaMoePreview) return;
+            const races = patch.extra_race_preview || [];
+            const factors = patch.learn_skill_preview || [];
+            const skillTier = (patch.learn_skill_list && patch.learn_skill_list[0]) || [];
+            const stars = patch.blue_stars_per_stat || [0,0,0,0,0];
+            const support = patch.friend_support || {};
+            const knownRaces = races.filter(r => r.known).length;
+            const unknownRaces = races.length - knownRaces;
+
+            const raceTagsHtml = races.map(r => {
+                const label = r.name ? escapeHtml(r.name) : `p${r.program_id}`;
+                const cls = r.known ? 'uma-moe-preview-tag' : 'uma-moe-preview-tag is-warn';
+                return `<span class="${cls}" title="uma.moe id ${r.uma_moe_id} -> program ${r.program_id}">${label}</span>`;
+            }).join('');
+
+            const skillTagsHtml = skillTier.map(name => `<span class="uma-moe-preview-tag">${escapeHtml(name)}</span>`).join('');
+
+            const warnings = [];
+            if ((patch.extra_race_pruned_count || 0) > 0) {
+                warnings.push(`${patch.extra_race_pruned_count} lower-priority imported race(s) were pruned to keep the route near UG training budget.`);
+            }
+            if ((patch.extra_race_unmatched_count || 0) > 0) {
+                warnings.push(`${patch.extra_race_unmatched_count} race(s) could not be matched to local race_map.`);
+            }
+            if (unknownRaces > 0) warnings.push(`${unknownRaces} race(s) could not be matched to local race_map.`);
+            const skillCount = factors.filter(f => f.category === 'skill' || f.category === 'unique').length;
+            if (skillCount > skillTier.length) warnings.push(`${skillCount - skillTier.length} factor(s) had no name in factor_map.`);
+
+            els.umaMoePreview.innerHTML = `
+                <dl class="uma-moe-preview-grid">
+                    <dt>Trainer</dt><dd>${escapeHtml(patch.imported_trainer_name || '?')} <span style="opacity:.55">(${escapeHtml(patch.imported_from_trainer_id || '')})</span></dd>
+                    <dt>Trainee</dt><dd>${escapeHtml(patch.trainee_name || '?')} <span style="opacity:.55">card ${patch.trainee_card_id || '?'}</span></dd>
+                    <dt>Style</dt><dd>${escapeHtml(STYLE_NAMES[patch.running_style] || '?')}</dd>
+                    <dt>Friend</dt><dd>${escapeHtml(support.name || (patch.friend_card_id ? '(unknown card ' + patch.friend_card_id + ')' : 'n/a'))} ${support.type ? `<span style="opacity:.55">${escapeHtml(support.type)} LB${support.limit_break_count ?? 0}</span>` : ''}</dd>
+                    <dt>Stars</dt><dd>SPD ${stars[0]||0} / STA ${stars[1]||0} / PWR ${stars[2]||0} / GUT ${stars[3]||0} / WIT ${stars[4]||0} <span style="opacity:.55">(blue ${patch.blue_stars_total||0}, white ${patch.white_stars_total||0})</span></dd>
+                    <dt>Races</dt><dd><span style="opacity:.65">${races.length}${patch.extra_race_original_count ? ` kept from ${patch.extra_race_original_count}` : ''}</span><div class="uma-moe-preview-tags">${raceTagsHtml || '<span style="opacity:.55">none</span>'}</div></dd>
+                    <dt>Skills</dt><dd><div class="uma-moe-preview-tags">${skillTagsHtml || '<span style="opacity:.55">none</span>'}</div></dd>
+                </dl>
+                ${warnings.length ? `<div class="uma-moe-preview-warning">${warnings.map(escapeHtml).join(' &middot; ')}</div>` : ''}
+            `;
+            els.umaMoePreview.style.display = 'flex';
+        }
+
+        async function umaMoePreviewTrainer() {
+            const tid = normalizeTrainerId(els.umaMoeTrainerId?.value);
+            if (!tid) {
+                setUmaMoeStatus('Enter a numeric trainer id.', 'error');
+                return;
+            }
+            setUmaMoeStatus('Fetching from uma.moe...', '');
+            if (els.umaMoeImportBtn) els.umaMoeImportBtn.disabled = true;
+            try {
+                const res = await apiJson(`/api/uma-moe/trainer/${encodeURIComponent(tid)}`);
+                if (!res.success) throw new Error(res.detail || 'Fetch failed');
+                state.umaMoePendingPatch = res.patch || null;
+                renderUmaMoePreview(res.patch || {});
+                setUmaMoeStatus('Preview ready. IMPORT creates a new preset by default; runtime tuning stays in scripts.', 'ok');
+                if (els.umaMoeImportBtn) els.umaMoeImportBtn.disabled = false;
+            } catch (e) {
+                state.umaMoePendingPatch = null;
+                clearUmaMoePreview();
+                setUmaMoeStatus(e?.message || String(e), 'error');
+            }
+        }
+
+        async function umaMoeImportTrainer() {
+            const tid = normalizeTrainerId(els.umaMoeTrainerId?.value);
+            if (!tid) {
+                setUmaMoeStatus('Enter a numeric trainer id.', 'error');
+                return;
+            }
+            const suggestedName = state.umaMoePendingPatch?.imported_trainer_name
+                ? `uma.moe ${state.umaMoePendingPatch.imported_trainer_name} ${Date.now()}`
+                : `uma.moe ${tid} ${Date.now()}`;
+            const targetName = prompt('Create new preset name for this imported reference plan:', suggestedName);
+            if (!targetName || !targetName.trim()) {
+                setUmaMoeStatus('Import cancelled.', '');
+                return;
+            }
+            setUmaMoeStatus('Importing...', '');
+            try {
+                const res = await apiJson('/api/uma-moe/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        trainer_id: tid,
+                        preset_name: targetName.trim(),
+                        create_only: true,
+                        overwrite_races: true,
+                        overwrite_skills: true,
+                        overwrite_running_style: true,
+                        overwrite_supports: true,
+                        overwrite_trainee: true,
+                    }),
+                });
+                if (!res.success) throw new Error(res.detail || 'Import failed');
+                setUmaMoeStatus(`Imported into preset '${res.preset?.name || targetName}'.`, 'ok');
+                state.selectedPreset = res.preset?.name || targetName.trim();
+                localStorage.setItem('uma_selected_preset', state.selectedPreset);
+                persistSelectedPresetToCache(state.selectedPreset);
+                await loadPresets();
+                if (els.presetSelect) els.presetSelect.value = state.selectedPreset;
+                syncSelectedPresetRaces();
+                populatePresetUI();
+                renderRaces();
+                clearUmaMoePreview();
+                setUmaMoeStatus(`Imported into preset '${state.selectedPreset}'.`, 'ok');
+            } catch (e) {
+                setUmaMoeStatus(e?.message || String(e), 'error');
+            }
+        }
+
+        const UMA_MOE_STYLE_PILL_CLASS = {
+            1: 'uma-moe-style-front',
+            2: 'uma-moe-style-pace',
+            3: 'uma-moe-style-late',
+            4: 'uma-moe-style-end',
+        };
+
+        function numericSortValue(...values) {
+            for (const value of values) {
+                if (value === null || value === undefined || value === '') continue;
+                const parsed = Number(String(value).replace(/,/g, ''));
+                if (Number.isFinite(parsed)) return parsed;
+            }
+            return 0;
+        }
+
+        function umaMoeSortValue(result, key) {
+            if (key === 'g1') return numericSortValue(result.g1_win_count);
+            if (key === 'date') {
+                const ts = Date.parse(result.last_updated || '');
+                return Number.isFinite(ts) ? ts : 0;
+            }
+            return numericSortValue(
+                result.score,
+                result.parent_score,
+                result.parent_rank,
+                result.rank_score,
+                result.affinity_score
+            );
+        }
+
+        function sortedUmaMoeResults(results) {
+            const key = state.umaMoeSortKey || 'score';
+            const dir = state.umaMoeSortDir === 'asc' ? 1 : -1;
+            return [...(results || [])].sort((a, b) => {
+                const av = umaMoeSortValue(a, key);
+                const bv = umaMoeSortValue(b, key);
+                if (av !== bv) return (av - bv) * dir;
+                return numericSortValue(b.score, b.parent_rank, b.rank_score, b.affinity_score) -
+                    numericSortValue(a.score, a.parent_rank, a.rank_score, a.affinity_score);
+            });
+        }
+
+        function syncUmaMoeSortControls() {
+            (els.umaMoeSortBtns || []).forEach(btn => {
+                btn.classList.toggle('is-active', btn.dataset.sortKey === state.umaMoeSortKey);
+            });
+            if (els.umaMoeSortDirBtn) {
+                els.umaMoeSortDirBtn.dataset.sortDir = state.umaMoeSortDir;
+                els.umaMoeSortDirBtn.textContent = state.umaMoeSortDir === 'asc' ? 'ASC' : 'DESC';
+            }
+        }
+
+        function setUmaMoeSearchStatus(text, kind = '') {
+            if (!els.umaMoeSearchStatus) return;
+            els.umaMoeSearchStatus.textContent = text || '';
+            els.umaMoeSearchStatus.classList.remove('is-error', 'is-ok');
+            if (kind === 'error') els.umaMoeSearchStatus.classList.add('is-error');
+            else if (kind === 'ok') els.umaMoeSearchStatus.classList.add('is-ok');
+        }
+
+        async function loadUmaMoeCharaPicker() {
+            if (state.umaMoeCharas) return state.umaMoeCharas;
+            const sel = els.umaMoeSearchChara;
+            try {
+                const res = await apiJson('/api/uma-moe/charas');
+                const charas = (res && res.charas) || {};
+                state.umaMoeCharas = charas;
+                if (!sel) return charas;
+                const entries = Object.entries(charas)
+                    .filter(([id, name]) => id && name)
+                    .sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+                const fragments = ['<option value="">— pick a uma —</option>'];
+                for (const [id, name] of entries) {
+                    fragments.push(`<option value="${escapeAttr(id)}">${escapeHtml(name)}</option>`);
+                }
+                sel.innerHTML = fragments.join('');
+                return charas;
+            } catch (e) {
+                setUmaMoeSearchStatus(`Failed to load chara list: ${e?.message || e}`, 'error');
+                return {};
+            }
+        }
+
+        function renderUmaMoeSearchResults(results, total, charaName) {
+            if (!els.umaMoeSearchResults) return;
+            syncUmaMoeSortControls();
+            const sortedResults = sortedUmaMoeResults(results);
+            if (!results || results.length === 0) {
+                els.umaMoeSearchResults.innerHTML = '<div class="uma-moe-search-empty">No trainers found for this uma yet.</div>';
+                els.umaMoeSearchResults.style.display = 'block';
+                return;
+            }
+            const totalLabel = typeof total === 'string' ? total : formatNumber(total || sortedResults.length);
+            const items = sortedResults.map(r => {
+                const tid = escapeAttr(r.trainer_id || '');
+                const name = escapeHtml(r.trainer_name || '(no name)');
+                const trainee = escapeHtml(r.trainee_name || (r.main_parent_id ? `card ${r.main_parent_id}` : '?'));
+                const stars = r.blue_stars_per_stat || [0, 0, 0, 0, 0];
+                const styleLabel = r.running_style ? escapeHtml(r.running_style_name || `style ${r.running_style}`) : '—';
+                const styleClass = UMA_MOE_STYLE_PILL_CLASS[r.running_style] || '';
+                const support = r.support_card_name ? escapeHtml(r.support_card_name) : '—';
+                const supportLb = r.support_card_id ? `LB${r.support_limit_break_count || 0}` : '';
+                const followers = Number(r.follower_num || 0);
+                const rank = r.parent_rank ? formatNumber(r.parent_rank) : '—';
+                const affinity = r.affinity_score ? formatNumber(r.affinity_score) : '—';
+                const portraitId = r.main_parent_id || '';
+                const updatedTs = Date.parse(r.last_updated || '');
+                const updatedAt = Number.isFinite(updatedTs) ? new Date(updatedTs).toLocaleDateString() : '—';
+                return `
+                <div class="uma-moe-search-result" data-trainer-id="${tid}" tabindex="0" role="button">
+                    <div class="uma-moe-search-result-portrait" style="background-image: url('/api/images/${escapeAttr(String(portraitId))}.png')"></div>
+                    <div class="uma-moe-search-result-body">
+                        <div class="uma-moe-search-result-top">
+                            <div class="uma-moe-search-result-name">${name}</div>
+                            <div class="uma-moe-search-result-tid">${tid}</div>
+                        </div>
+                        <div class="uma-moe-search-result-mid">
+                            <span class="uma-moe-search-result-trainee">${trainee}</span>
+                            <span class="uma-moe-search-result-pill ${styleClass}">${styleLabel}</span>
+                        </div>
+                        <div class="uma-moe-search-result-stats">
+                            <span title="Affinity score">A&nbsp;${affinity}</span>
+                            <span title="Parent rank">R&nbsp;${rank}</span>
+                            <span title="Win count">W&nbsp;${r.win_count || 0}</span>
+                            <span title="G1 win count">G1&nbsp;${r.g1_win_count || 0}</span>
+                            <span title="uma.moe followers">F&nbsp;${followers.toLocaleString()}</span>
+                            <span title="Career/update date">D&nbsp;${escapeHtml(updatedAt)}</span>
+                            <span title="Blue / Pink / White star totals">★&nbsp;${r.blue_stars_sum || 0}/${r.pink_stars_sum || 0}/${r.white_stars_sum || 0}</span>
+                        </div>
+                        <div class="uma-moe-search-result-blue" title="Blue stars per stat">
+                            <span>SPD&nbsp;${stars[0] || 0}</span>
+                            <span>STA&nbsp;${stars[1] || 0}</span>
+                            <span>PWR&nbsp;${stars[2] || 0}</span>
+                            <span>GUT&nbsp;${stars[3] || 0}</span>
+                            <span>WIT&nbsp;${stars[4] || 0}</span>
+                        </div>
+                        <div class="uma-moe-search-result-support">${support}${supportLb ? ` <span class="uma-moe-search-result-lb">${supportLb}</span>` : ''}</div>
+                    </div>
+                </div>`;
+            }).join('');
+            const headerName = charaName ? ` for <strong>${escapeHtml(charaName)}</strong>` : '';
+            const sortLabel = state.umaMoeSortKey === 'g1' ? 'G1 wins' : state.umaMoeSortKey === 'date' ? 'career date' : 'score';
+            els.umaMoeSearchResults.innerHTML = `
+                <div class="uma-moe-search-results-head">${sortedResults.length} of ${escapeHtml(String(totalLabel))} trainers${headerName} · sorted by ${escapeHtml(sortLabel)} ${state.umaMoeSortDir} · click one to preview &amp; import</div>
+                <div class="uma-moe-search-results-list">${items}</div>
+            `;
+            els.umaMoeSearchResults.style.display = 'block';
+            els.umaMoeSearchResults.querySelectorAll('.uma-moe-search-result').forEach(card => {
+                const pick = () => {
+                    const tid = card.getAttribute('data-trainer-id') || '';
+                    if (!tid) return;
+                    els.umaMoeSearchResults.querySelectorAll('.uma-moe-search-result.is-active').forEach(el => el.classList.remove('is-active'));
+                    card.classList.add('is-active');
+                    if (els.umaMoeTrainerId) els.umaMoeTrainerId.value = tid;
+                    umaMoePreviewTrainer();
+                };
+                card.addEventListener('click', pick);
+                card.addEventListener('keydown', ev => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        pick();
+                    }
+                });
+            });
+        }
+
+        async function umaMoeSearchByChara() {
+            const charaId = els.umaMoeSearchChara?.value || '';
+            if (!charaId) {
+                setUmaMoeSearchStatus('Pick a uma first.', 'error');
+                return;
+            }
+            const charaName = (state.umaMoeCharas || {})[charaId] || charaId;
+            setUmaMoeSearchStatus(`Searching uma.moe for ${charaName}...`, '');
+            if (els.umaMoeSearchBtn) els.umaMoeSearchBtn.disabled = true;
+            try {
+                const res = await apiJson(`/api/uma-moe/search?chara_id=${encodeURIComponent(charaId)}&limit=15`);
+                if (!res.success) throw new Error(res.detail || 'Search failed');
+                const resultsList = res.results || [];
+                state.umaMoeSearchResults = resultsList;
+                state.umaMoeSearchTotal = res.total;
+                state.umaMoeSearchCharaName = res.chara_name || charaName;
+                renderUmaMoeSearchResults(state.umaMoeSearchResults, state.umaMoeSearchTotal, state.umaMoeSearchCharaName);
+                const totalLabel = typeof res.total === 'string' ? res.total : formatNumber(res.total || resultsList.length);
+                if (resultsList.length === 0) {
+                    setUmaMoeSearchStatus(`No public uma.moe records for ${charaName} yet.`, '');
+                } else {
+                    setUmaMoeSearchStatus(`${resultsList.length} of ${totalLabel} trainers shown.`, 'ok');
+                }
+            } catch (e) {
+                setUmaMoeSearchStatus(e?.message || String(e), 'error');
+                if (els.umaMoeSearchResults) {
+                    els.umaMoeSearchResults.style.display = 'none';
+                    els.umaMoeSearchResults.innerHTML = '';
+                }
+            } finally {
+                if (els.umaMoeSearchBtn) els.umaMoeSearchBtn.disabled = !els.umaMoeSearchChara?.value;
+            }
         }
 
         function bindPresetHandlers() {
@@ -1543,15 +2389,54 @@ const els = {
                 els.presetSelect.addEventListener('change', async (e) => {
                     state.selectedPreset = e.target.value;
                     localStorage.setItem('uma_selected_preset', state.selectedPreset);
+                    persistSelectedPresetToCache(state.selectedPreset);
                     syncSelectedPresetRaces();
                     populatePresetUI();
                     renderRaces();
+                    applyPresetRentalSelection();
+                    updateAdvisorRecommendations();
                 });
             }
 
-            const saveHandler = () => savePresetConfig();
+            const saveHandler = () => {
+                savePresetConfig();
+                updateAdvisorRecommendations();
+            };
             els.presetSkillThreshold?.addEventListener('change', saveHandler);
             els.presetRunningStyle?.addEventListener('change', saveHandler);
+            Object.values(els.presetMinStats || {}).forEach(el => el?.addEventListener('change', saveHandler));
+            Object.values(els.presetMaxStats || {}).forEach(el => el?.addEventListener('change', saveHandler));
+
+            els.umaMoePreviewBtn?.addEventListener('click', () => umaMoePreviewTrainer());
+            els.umaMoeImportBtn?.addEventListener('click', () => umaMoeImportTrainer());
+            els.umaMoeTrainerId?.addEventListener('input', () => {
+                if (els.umaMoeImportBtn) els.umaMoeImportBtn.disabled = true;
+                clearUmaMoePreview();
+            });
+            els.umaMoeTrainerId?.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    umaMoePreviewTrainer();
+                }
+            });
+
+            if (els.umaMoeSearchChara) {
+                loadUmaMoeCharaPicker();
+                els.umaMoeSearchChara.addEventListener('change', () => {
+                    if (els.umaMoeSearchBtn) els.umaMoeSearchBtn.disabled = !els.umaMoeSearchChara.value;
+                });
+            }
+            els.umaMoeSearchBtn?.addEventListener('click', () => umaMoeSearchByChara());
+            (els.umaMoeSortBtns || []).forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.umaMoeSortKey = btn.dataset.sortKey || 'score';
+                    renderUmaMoeSearchResults(state.umaMoeSearchResults, state.umaMoeSearchTotal, state.umaMoeSearchCharaName);
+                });
+            });
+            els.umaMoeSortDirBtn?.addEventListener('click', () => {
+                state.umaMoeSortDir = state.umaMoeSortDir === 'asc' ? 'desc' : 'asc';
+                renderUmaMoeSearchResults(state.umaMoeSearchResults, state.umaMoeSearchTotal, state.umaMoeSearchCharaName);
+            });
 
             els.presetEditSkillsBtn?.addEventListener('click', () => {
                 if (!state.selectedPreset) return;
@@ -1702,6 +2587,7 @@ const els = {
                     }
                     state.selectedPreset = res.preset.name;
                     localStorage.setItem('uma_selected_preset', state.selectedPreset);
+                    persistSelectedPresetToCache(state.selectedPreset);
                     await loadPresets();
                     if (els.presetSelect) els.presetSelect.value = state.selectedPreset;
                     syncSelectedPresetRaces();
@@ -1739,12 +2625,16 @@ const els = {
                         els.presetSelect.innerHTML = state.presets.map(p => `<option value="${escapeAttr(p.name)}">${escapeHtml(p.name)}</option>`).join('');
                     }
                     const saved = localStorage.getItem('uma_selected_preset');
+                    const cached = state.lastSessionCache && state.lastSessionCache.selected_preset;
                     if (saved && state.presets.some(p => p.name === saved)) {
                         state.selectedPreset = saved;
+                    } else if (cached && state.presets.some(p => p.name === cached)) {
+                        state.selectedPreset = cached;
                     } else {
                         state.selectedPreset = state.presets[0].name;
                     }
                     localStorage.setItem('uma_selected_preset', state.selectedPreset);
+                    persistSelectedPresetToCache(state.selectedPreset);
                     if (els.presetSelect) els.presetSelect.value = state.selectedPreset;
                     populatePresetUI();
                 } else {
@@ -1785,8 +2675,14 @@ const els = {
             els.friendGrid.innerHTML = visibleFriends.map(friend => {
                 const imgId = friend.support_card_id || '10001';
                 const lb = friend.limit_break_count ?? '?';
+                const relation = friendStateLabel(friend.friend_state);
+                const canUnfollow = Number(friend.friend_state || 0) > 0;
                 return `<div class="grid-card friend-card">
                     <img src="/api/images/${imgId}.png" onerror="hideBrokenImage(this)">
+                    <span class="relationship-badge">${escapeHtml(relation)}</span>
+                    <button class="friend-follow-btn friend-follow-top" type="button" data-action="${canUnfollow ? 'unfollow' : 'follow'}" data-viewer-id="${escapeAttr(String(friend.viewer_id || ''))}">
+                        ${canUnfollow ? 'UNFOLLOW' : 'FOLLOW'}
+                    </button>
                     <div class="grid-card-overlay">
                         <span class="grid-card-name">${friend.support_name || 'Unknown'}</span>
                         <span class="grid-card-kicker">${friend.type || '?'} | LB${lb}</span>
@@ -1795,6 +2691,7 @@ const els = {
             }).filter(Boolean).join('');
             attachFriendHandlers();
             syncFriendSelection();
+            renderFriendManageList();
             renderTeamPanel();
         }
         function appendSeenFriendIds(ids) {
@@ -1818,17 +2715,22 @@ const els = {
             els.friendRefreshBtn.disabled = true;
             els.friendStatus.classList.remove('error');
             els.friendStatus.innerText = refresh ? 'Refreshing friends...' : 'Loading friends...';
-            const excludeIds = refresh ? (dashData.friendExcludeIds || []) : [];
+            const excludeIds = [];
             try {
                 const data = await apiJson('/api/career/friends', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ exclude_viewer_ids: excludeIds })
+                    body: JSON.stringify({ exclude_viewer_ids: excludeIds, force_refresh: !!refresh })
                 });
                 if (!data.success) throw new Error(data.detail || 'Friend load failed');
                 dashData.friends = data.friends || [];
                 appendSeenFriendIds(data.exclude_viewer_ids || []);
                 renderFriends();
+                if (data.warning && els.friendStatus) {
+                    els.friendStatus.innerText = `Using cached friends; refresh failed: ${data.warning}`;
+                    els.friendStatus.classList.add('error');
+                    return;
+                }
                 if (data.source === 'Active Career (Skip)') {
                     els.friendStatus.innerText = 'Active career, endpoint blocked';
                     return;
@@ -1847,6 +2749,13 @@ const els = {
         }
         function attachFriendHandlers() {
             const visibleFriends = (dashData && dashData.visibleFriends) || [];
+            document.querySelectorAll('#friend-grid .friend-follow-btn').forEach(btn => {
+                btn.addEventListener('click', ev => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    manageFollow(btn.dataset.action, Number(btn.dataset.viewerId || 0));
+                });
+            });
             document.querySelectorAll('#friend-grid .grid-card').forEach((el, i) => {
                 el.classList.add('selectable');
                 el.addEventListener('click', () => {
@@ -1859,6 +2768,306 @@ const els = {
                 });
             });
         }
+
+        async function manageFollow(action, viewerId) {
+            if (!viewerId || state.isManagingFollow) return;
+            state.isManagingFollow = true;
+            if (els.friendManageStatus) {
+                els.friendManageStatus.classList.remove('error');
+                els.friendManageStatus.innerText = `${action === 'unfollow' ? 'Unfollowing' : 'Following'} ${viewerId}...`;
+            }
+            try {
+                const res = await apiJson(`/api/friends/${action === 'unfollow' ? 'unfollow' : 'follow'}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ viewer_id: viewerId })
+                });
+                if (!res.success) throw new Error(res.detail || 'Follow action failed');
+                if (els.friendManageStatus) els.friendManageStatus.innerText = 'Relationship updated. Refreshing...';
+                await loadFriends(true);
+                await loadFriendVeterans(true);
+            } catch (e) {
+                if (els.friendManageStatus) {
+                    els.friendManageStatus.innerText = e?.message || String(e);
+                    els.friendManageStatus.classList.add('error');
+                }
+            } finally {
+                state.isManagingFollow = false;
+            }
+        }
+
+        function vetKey(vet) {
+            if (!vet) return '';
+            return `${vet.viewer_id}:${vet.trained_chara_id}`;
+        }
+        // Game rank ids -> letter (matches the chip the game itself draws on a
+        // veteran card). Anything > 13 = EX-tier (UG/UF/UE/UD/UC/UB/UA/US).
+        const VET_RANK_LABELS = {
+            1: 'G',   2: 'G+',
+            3: 'F',   4: 'F+',
+            5: 'E',   6: 'E+',
+            7: 'D',   8: 'D+',
+            9: 'C',  10: 'C+',
+           11: 'B',  12: 'B+',
+           13: 'A',  14: 'A+',
+           15: 'S',  16: 'S+',
+           17: 'SS', 18: 'SS+',
+           19: 'UG', 20: 'UG+',
+           21: 'UF', 22: 'UF+',
+           23: 'UE', 24: 'UE+',
+           25: 'UD', 26: 'UD+',
+           27: 'UC', 28: 'UC+',
+           29: 'UB', 30: 'UB+',
+           31: 'UA', 32: 'UA+',
+           33: 'US', 34: 'US+',
+        };
+        const VET_SCENARIO_NAMES = {
+            1: 'URA',
+            2: 'Aoharu',
+            3: "Make a New Track",
+            4: 'Trailblazer',
+            5: "Grand Live",
+            6: 'Grand Masters',
+            7: 'L\'Arc',
+            8: "UAF Ready Go",
+            9: 'Daily',
+           10: 'Pretty Derby',
+           11: 'Mecha Umamusume',
+        };
+        function rankLabel(rankId) {
+            if (!rankId) return '';
+            return VET_RANK_LABELS[rankId] || `R${rankId}`;
+        }
+        function rankTier(rankId) {
+            // Used for CSS color coding: low (G..D+), mid (C..A+), high (S..SS+),
+            // ex (UG and above).
+            if (!rankId) return 'unk';
+            if (rankId <= 8) return 'low';
+            if (rankId <= 14) return 'mid';
+            if (rankId <= 18) return 'high';
+            return 'ex';
+        }
+        function statTier(value) {
+            const v = Number(value) || 0;
+            if (v >= 1200) return 'blue3';   // ★3 blue factor
+            if (v >= 1100) return 'blue2';   // ★2
+            if (v >= 600)  return 'blue1';   // ★1
+            return 'white';
+        }
+        function renderVetStats(v) {
+            const cells = [
+                ['SPD', v.speed],
+                ['STA', v.stamina],
+                ['PWR', v.power],
+                ['GUT', v.guts],
+                ['WIT', v.wiz],
+            ];
+            return cells.map(([label, raw]) => {
+                const tier = statTier(raw);
+                return `<span class="vet-stat vet-stat-${tier}">
+                    <span class="vet-stat-label">${label}</span>
+                    <span class="vet-stat-value">${Number(raw) || 0}</span>
+                </span>`;
+            }).join('');
+        }
+        function renderVetFactors(factors, max = 5) {
+            const items = (factors || [])
+                .filter(f => f && (f.category === 'stat' || f.category === 'aptitude' ||
+                                   f.category === 'unique' || f.category === 'skill'))
+                .slice(0, max);
+            if (!items.length) return '';
+            return `<div class="vet-factors">${items.map(f => {
+                const stars = '★'.repeat(Math.min(3, Math.max(0, Number(f.stars) || 0)));
+                return `<span class="vet-factor vet-factor-${escapeAttr(f.category)}" title="${escapeAttr(f.name)} ${stars}">
+                    ${escapeHtml(f.name)}<span class="vet-factor-stars">${stars}</span>
+                </span>`;
+            }).join('')}</div>`;
+        }
+        function renderVetParents(parentCardIds) {
+            const ids = (parentCardIds || []).filter(Boolean);
+            if (!ids.length) return '';
+            return `<div class="vet-parents" title="Direct parents">${ids.map(cid => `
+                <img class="vet-parent-portrait" src="/api/images/${cid}.png" onerror="hideBrokenImage(this)" alt="${cid}">
+            `).join('')}</div>`;
+        }
+        function renderFriendVeterans() {
+            if (!els.friendVetGrid) return;
+            const vets = (dashData && dashData.friendVeterans) || [];
+            if (els.friendVetCount) els.friendVetCount.innerText = `(${vets.length})`;
+            els.friendVetGrid.innerHTML = vets.map(v => {
+                const imgId = v.card_id || 100101;
+                const rank = rankLabel(v.rank);
+                const tier = rankTier(v.rank);
+                const scenario = VET_SCENARIO_NAMES[v.scenario_id] || '';
+                const style = STYLE_NAMES[v.running_style] || '';
+                const score = Number(v.rank_score) || 0;
+                const deckLabel = v.deck_archetype ? `Deck: ${v.deck_archetype}` : '';
+                return `<div class="grid-card friend-card friend-vet-card vet-tier-${tier}" data-vet-key="${vetKey(v)}">
+                    <img src="/api/images/${imgId}.png" onerror="hideBrokenImage(this)">
+                    ${rank ? `<span class="rank-badge vet-rank-${tier}">${escapeHtml(rank)}</span>` : ''}
+                    ${renderVetParents(v.parent_card_ids)}
+                    <div class="grid-card-overlay vet-overlay">
+                        <div class="vet-stats">${renderVetStats(v)}</div>
+                        ${renderVetFactors(v.factors)}
+                        ${renderSupportDeckStrip(v.deck_support_cards || v.deck_support_ids, 'support-deck-strip vet-deck-strip')}
+                        <span class="grid-card-name">${escapeHtml(v.chara_name || 'Unknown')}</span>
+                        <span class="grid-card-kicker">
+                            ${escapeHtml(v.trainer_name || '')}
+                            ${scenario ? ` &middot; ${escapeHtml(scenario)}` : ''}
+                            ${style ? ` &middot; ${escapeHtml(style)}` : ''}
+                            ${score ? ` &middot; ${score.toLocaleString()}pt` : ''}
+                            ${deckLabel ? ` &middot; ${escapeHtml(deckLabel)}` : ''}
+                        </span>
+                    </div>
+                </div>`;
+            }).join('');
+            attachFriendVeteranHandlers();
+            syncFriendVeteranSelection();
+            renderTeamPanel();
+            updateAdvisorRecommendations();
+        }
+        function syncFriendVeteranSelection() {
+            const selected = selection.rentalParent;
+            const key = selected ? vetKey(selected) : '';
+            document.querySelectorAll('#friend-vet-grid .grid-card').forEach(el => {
+                el.classList.toggle('selected', el.dataset.vetKey === key);
+            });
+        }
+        function attachFriendVeteranHandlers() {
+            const vets = (dashData && dashData.friendVeterans) || [];
+            document.querySelectorAll('#friend-vet-grid .grid-card').forEach((el, i) => {
+                el.classList.add('selectable');
+                el.addEventListener('click', () => {
+                    const vet = vets[i];
+                    if (!vet) return;
+                    const already = selection.rentalParent && vetKey(selection.rentalParent) === vetKey(vet);
+                    selection.rentalParent = already ? null : vet;
+                    syncFriendVeteranSelection();
+                    syncSelectionToServer();
+                    savePresetRentalChara();
+                    renderTeamPanel();
+                    updateAdvisorRecommendations();
+                });
+            });
+        }
+        async function savePresetRentalChara() {
+            // Keep rental parent choice in the active UI/server selection only.
+            // Runtime career tuning now reads the start request instead of
+            // mutating preset JSON for every parent experiment.
+            const v = selection.rentalParent;
+            selection.rentalParent = v || null;
+            await syncSelectionToServer();
+        }
+        async function loadFriendVeterans(refresh = false) {
+            if (!dashData || state.isFetchingFriendVeterans) return;
+            const isCareerActive = dashData.account && dashData.account.career && dashData.account.career.active;
+            if (isCareerActive) {
+                if (els.friendVetRefreshBtn) els.friendVetRefreshBtn.disabled = true;
+                if (els.friendVetStatus) {
+                    els.friendVetStatus.classList.remove('error');
+                    els.friendVetStatus.innerText = 'Active career, endpoint blocked';
+                }
+                return;
+            }
+            state.isFetchingFriendVeterans = true;
+            if (els.friendVetRefreshBtn) els.friendVetRefreshBtn.disabled = true;
+            if (els.friendVetStatus) {
+                els.friendVetStatus.classList.remove('error');
+                els.friendVetStatus.innerText = refresh ? 'Refreshing borrowable parents...' : 'Loading borrowable parents...';
+            }
+            try {
+                // Reuse /api/career/friends which also populates the veterans cache.
+                const data = await apiJson('/api/career/friends', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ exclude_viewer_ids: [], force_refresh: !!refresh })
+                });
+                if (!data.success) throw new Error(data.detail || 'Veteran load failed');
+                dashData.friendVeterans = data.veterans || [];
+                dashData.friendVeteransSource = data.veterans_source || 'unknown';
+                if (els.friendVetStatus) {
+                    if (data.veterans_source === 'no_data') {
+                        els.friendVetStatus.innerText = 'No borrowable veterans surfaced by the game yet. Make sure you have friends with public veterans, then REFRESH.';
+                    } else {
+                        els.friendVetStatus.innerText = `Found ${dashData.friendVeterans.length} borrowable parent(s)`;
+                    }
+                }
+                renderFriendVeterans();
+                applyPresetRentalSelection();
+                updateAdvisorRecommendations();
+            } catch (e) {
+                if (els.friendVetStatus) {
+                    els.friendVetStatus.innerText = e.message || 'Veteran load failed';
+                    els.friendVetStatus.classList.add('error');
+                }
+            } finally {
+                state.isFetchingFriendVeterans = false;
+                const stillActive = dashData.account && dashData.account.career && dashData.account.career.active;
+                if (els.friendVetRefreshBtn) els.friendVetRefreshBtn.disabled = !!stillActive;
+            }
+        }
+        function applyPresetRentalSelection() {
+            // When a preset specifies a rental parent (e.g. from uma.moe), try
+            // to find the matching loaded veteran and highlight it.
+            //
+            // Resolution order:
+            //   1. exact (viewer_id, trained_chara_id) — set after the user
+            //      clicked a veteran in this UI;
+            //   2. (viewer_id, card_id hint) — for fresh uma.moe imports we
+            //      only know the trainer + their published parent's card_id,
+            //      so we pick that trainer's highest-rank veteran on that card;
+            //   3. card_id hint alone — fall back to any friend running that
+            //      card_id if the trainer is not in the friend list.
+            const preset = getCurrentPreset();
+            if (!preset) return;
+            const vid = Number(preset.rental_chara_viewer_id || 0);
+            const cid = Number(preset.rental_chara_id || 0);
+            const cardHint = Number(preset.rental_chara_card_id || 0);
+            if (!vid && !cid && !cardHint) {
+                if (selection.rentalParent) {
+                    selection.rentalParent = null;
+                    syncFriendVeteranSelection();
+                    renderTeamPanel();
+                }
+                return;
+            }
+            const vets = (dashData && dashData.friendVeterans) || [];
+
+            let match = null;
+            if (vid && cid) {
+                match = vets.find(v => Number(v.viewer_id) === vid && Number(v.trained_chara_id) === cid) || null;
+            }
+            if (!match && vid && cardHint) {
+                const ownerVets = vets
+                    .filter(v => Number(v.viewer_id) === vid && Number(v.card_id) === cardHint)
+                    .sort((a, b) => (Number(b.rank_score) || 0) - (Number(a.rank_score) || 0));
+                match = ownerVets[0] || null;
+            }
+            if (!match && cardHint) {
+                const cardVets = vets
+                    .filter(v => Number(v.card_id) === cardHint)
+                    .sort((a, b) => (Number(b.rank_score) || 0) - (Number(a.rank_score) || 0));
+                match = cardVets[0] || null;
+            }
+
+            if (match) {
+                selection.rentalParent = match;
+                // Auto-persist the resolved trained_chara_id back into the preset
+                // so subsequent loads pin to this exact veteran.
+                if (Number(preset.rental_chara_id || 0) !== Number(match.trained_chara_id)) {
+                    savePresetRentalChara();
+                }
+            } else if (vid && cid) {
+                // Preset specifies a rental we don't have in the friend list (e.g.
+                // imported from uma.moe but that trainer isn't an in-game friend).
+                // Keep a stub so the start payload still sends the ids.
+                selection.rentalParent = { viewer_id: vid, trained_chara_id: cid, chara_name: '(unloaded)', trainer_name: '(unloaded)' };
+            } else {
+                selection.rentalParent = null;
+            }
+            syncFriendVeteranSelection();
+            renderTeamPanel();
+        }
         async function startCareer() {
             const reason = getStartMissingReason();
             if (reason || state.isStartingCareer) {
@@ -1870,6 +3079,8 @@ const els = {
             let finalMessage = '';
             let finalIsError = false;
             const activeCareer = state.account && state.account.career && state.account.career.active;
+            const rentalParent = selection.rentalParent || null;
+            const boost = resolveEventBoostForStart();
             const body = activeCareer ? {
                 preset_name: state.selectedPreset,
                 max_steps: 2500,
@@ -1881,14 +3092,16 @@ const els = {
                 friend_viewer_id: Number(selection.friend.viewer_id),
                 friend_card_id: Number(selection.friend.support_card_id),
                 parent_id_1: Number(selection.veterans[0].instance_id),
-                parent_id_2: Number(selection.veterans[1].instance_id),
-                deck_id: Number(selection.deck.id),
+                parent_id_2: selection.veterans[1] ? Number(selection.veterans[1].instance_id) : 0,
+                rental_viewer_id: rentalParent ? Number(rentalParent.viewer_id) : 0,
+                rental_chara_id: rentalParent ? Number(rentalParent.trained_chara_id) : 0,
+                deck_id: Number(selection.deck.deck_id || selection.deck.id) || 1,
                 scenario_id: 4,
-                use_tp: 30,
+                use_tp: boost.useTp,
                 difficulty_id: 0,
                 difficulty: 0,
-                is_boost: 0,
-                boost_story_event_id: 0,
+                is_boost: boost.isBoost,
+                boost_story_event_id: boost.storyEventId,
                 preset_name: state.selectedPreset,
                 max_steps: 2500,
                 burn_clocks: state.burnClocks,
@@ -1908,7 +3121,9 @@ const els = {
                     renderFriends();
                 }
                 startRunnerPolling();
-                finalMessage = 'Career runner started';
+                const advisor = data.runtime_advisor || {};
+                const archetype = advisor.deck_archetype ? ` (${advisor.deck_archetype})` : '';
+                finalMessage = `Career runner started${archetype}`;
             } catch (e) {
                 finalMessage = e.message || 'Start failed';
                 finalIsError = true;
@@ -2119,7 +3334,45 @@ const els = {
         els.friendRefreshBtn.addEventListener('click', event => {
             event.stopPropagation();
             loadFriends(true);
+            loadFriendVeterans(true);
         });
+        if (els.friendVetRefreshBtn) {
+            els.friendVetRefreshBtn.addEventListener('click', event => {
+                event.stopPropagation();
+                loadFriendVeterans(true);
+            });
+        }
+        els.friendPreviewBtn?.addEventListener('click', event => {
+            event.stopPropagation();
+            previewFriendId();
+        });
+        els.friendFollowIdBtn?.addEventListener('click', event => {
+            event.stopPropagation();
+            followFriendId();
+        });
+        els.friendIdInput?.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                previewFriendId();
+            }
+        });
+        if (els.deckEditorNewBtn) {
+            els.deckEditorNewBtn.addEventListener('click', event => {
+                event.stopPropagation();
+                openDeckEditor();
+            });
+        }
+        if (els.deckEditorSaveBtn) {
+            els.deckEditorSaveBtn.addEventListener('click', event => {
+                event.stopPropagation();
+                saveDeckEditor();
+            });
+        }
+        if (els.deckEditorName) {
+            els.deckEditorName.addEventListener('input', () => {
+                state.deckEditor.name = els.deckEditorName.value;
+            });
+        }
         els.startCareerBtn.addEventListener('click', startCareer);
 
         function selectDeck(index, element) {
@@ -2133,6 +3386,7 @@ const els = {
             renderFriends();
             renderTeamPanel();
             syncSelectionToServer();
+            updateAdvisorRecommendations();
         }
         function selectTrainee(index, element) {
             const alreadySelected = element.classList.contains('selected');
@@ -2146,6 +3400,7 @@ const els = {
             updateVetSelectability();
             renderTeamPanel();
             syncSelectionToServer();
+            updateAdvisorRecommendations();
         }
         function selectParent(index, element) {
             if (element.classList.contains('vet-full')) return;
@@ -2159,11 +3414,24 @@ const els = {
             updateVetSelectability();
             renderTeamPanel();
             syncSelectionToServer();
+            updateAdvisorRecommendations();
         }
-        function attachSelectionHandlers() {
+        function attachDeckHandlers() {
             document.querySelectorAll('.deck-container').forEach((element, index) => {
                 element.addEventListener('click', () => selectDeck(index, element));
             });
+            document.querySelectorAll('.deck-edit-btn').forEach(btn => {
+                btn.addEventListener('click', event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const deck = (dashData.validDecks || []).find(item => String(item.id) === String(btn.dataset.deckId));
+                    if (deck) openDeckEditor(deck);
+                });
+            });
+        }
+
+        function attachSelectionHandlers() {
+            attachDeckHandlers();
             document.querySelectorAll('#uma-grid .grid-card').forEach((element, index) => {
                 element.classList.add('selectable');
                 element.addEventListener('click', () => selectTrainee(index, element));
@@ -2197,14 +3465,148 @@ const els = {
                         </div>
                     </div>`;
                 }).join('');
+                const localActions = deck.local ? `<button class="btn btn-sm deck-edit-btn" type="button" data-deck-id="${escapeAttr(deck.id)}">EDIT</button>` : '';
                 return `<div class="deck-container">
                     <div class="deck-header">
-                        <span>${deck.name.toUpperCase()}</span>
-                        <span style="font-size:0.85rem; opacity:0.8">SLOT ${deck.id}</span>
+                        <span>${escapeHtml(deck.name || 'Deck').toUpperCase()} ${deck.local ? '<span class="deck-local-badge">LOCAL</span>' : ''}</span>
+                        <span style="font-size:0.85rem; opacity:0.8">${deck.local ? 'SWEEPY' : `SLOT ${deck.id}`} ${localActions}</span>
                     </div>
                     <div class="deck-cards">${cards}</div>
                 </div>`;
             }).join('');
+        }
+
+        function supportById(id) {
+            const sid = String(id || '');
+            return ((dashData && dashData.supports) || []).find(card => String(card.id) === sid) || null;
+        }
+
+        function enrichDeckCard(card) {
+            return supportById(card && card.id) || card || {};
+        }
+
+        function renderDeckEditor() {
+            if (!els.deckEditorPanel) return;
+            const editor = state.deckEditor;
+            els.deckEditorPanel.style.display = editor.open ? '' : 'none';
+            if (els.deckEditorName) els.deckEditorName.value = editor.name || '';
+            if (els.deckEditorSaveBtn) els.deckEditorSaveBtn.disabled = !editor.open || editor.cards.length !== 5;
+            if (!editor.open) return;
+            const selectedIds = new Set(editor.cards.map(card => String(card.id)));
+            document.querySelectorAll('#card-grid .grid-card').forEach(el => {
+                el.classList.toggle('deck-pick-selected', selectedIds.has(String(el.dataset.cardId || '')));
+            });
+            const slots = Array.from({ length: 5 }, (_, idx) => {
+                const card = editor.cards[idx];
+                if (!card) {
+                    return `<div class="deck-editor-slot deck-editor-slot-empty" data-slot="${idx}">Click owned cards to fill slot ${idx + 1}</div>`;
+                }
+                const imgId = card.id || '10001';
+                return `<button class="deck-editor-slot" type="button" data-remove-card="${escapeAttr(card.id)}">
+                    <img src="/api/images/${imgId}.png" onerror="hideBrokenImage(this)">
+                    <span>${escapeHtml(card.name || `Card ${card.id}`)}</span>
+                    <small>${escapeHtml(card.rarity || '?')} · ${escapeHtml(card.type || '?')} · LB${card.limit_break_count ?? '?'}</small>
+                </button>`;
+            }).join('');
+            const inspect = editor.inspectCard || editor.cards[editor.cards.length - 1] || null;
+            const inspector = inspect ? `
+                <div class="deck-card-inspector">
+                    <img src="/api/images/${inspect.id || '10001'}.png" onerror="hideBrokenImage(this)">
+                    <div>
+                        <div class="deck-inspector-title">${escapeHtml(inspect.name || `Card ${inspect.id}`)}</div>
+                        <div class="deck-inspector-meta">${escapeHtml(inspect.rarity || '?')} · ${escapeHtml(inspect.type || '?')} · LB${inspect.limit_break_count ?? '?'} · EXP ${formatNumber(inspect.exp || 0)}</div>
+                        <div class="deck-inspector-copy">Use owned cards here; the friend support remains selected in the Friend Supports section. Local decks save to <code>data/decks.json</code> and do not modify the game deck slot.</div>
+                        <a class="deck-inspector-link" href="https://gametora.com/umamusume/supports/${encodeURIComponent(inspect.id || '')}" target="_blank" rel="noreferrer">Open reference</a>
+                    </div>
+                </div>
+            ` : `<div class="deck-card-inspector deck-card-inspector-empty">Click a card in OWNED CARDS to inspect and add it.</div>`;
+            els.deckEditorPanel.innerHTML = `
+                <div class="deck-editor-help">Building ${editor.cards.length}/5 owned support cards. Click a selected slot to remove it.</div>
+                <div class="deck-editor-slots">${slots}</div>
+                ${inspector}
+            `;
+            els.deckEditorPanel.querySelectorAll('[data-remove-card]').forEach(btn => {
+                btn.addEventListener('click', event => {
+                    event.preventDefault();
+                    const id = String(btn.dataset.removeCard || '');
+                    editor.cards = editor.cards.filter(card => String(card.id) !== id);
+                    renderDeckEditor();
+                    renderSupports(dashData.supports || []);
+                });
+            });
+        }
+
+        function openDeckEditor(deck = null) {
+            const cards = (deck && deck.cards ? deck.cards : []).map(enrichDeckCard).filter(card => card.id);
+            state.deckEditor = {
+                open: true,
+                id: deck && deck.local ? String(deck.id || '') : `local_${Date.now()}`,
+                name: deck ? deck.name || 'Sweepy Deck' : 'Sweepy Deck',
+                cards,
+                inspectCard: cards[0] || null
+            };
+            if (els.deckEditorStatus) {
+                els.deckEditorStatus.innerText = 'Click owned cards below to add/remove. Save when 5 are selected.';
+                els.deckEditorStatus.classList.remove('error');
+            }
+            renderDeckEditor();
+            renderSupports(dashData.supports || []);
+        }
+
+        function toggleDeckEditorCard(card) {
+            if (!state.deckEditor.open || !card) return;
+            const id = String(card.id || '');
+            state.deckEditor.inspectCard = card;
+            const exists = state.deckEditor.cards.some(c => String(c.id) === id);
+            if (exists) {
+                state.deckEditor.cards = state.deckEditor.cards.filter(c => String(c.id) !== id);
+            } else if (state.deckEditor.cards.length < 5) {
+                state.deckEditor.cards.push(card);
+            } else if (els.deckEditorStatus) {
+                els.deckEditorStatus.innerText = 'Deck is full; remove a slot before adding another card.';
+                els.deckEditorStatus.classList.add('error');
+            }
+            renderDeckEditor();
+            renderSupports(dashData.supports || []);
+        }
+
+        async function saveDeckEditor() {
+            if (!state.deckEditor.open || state.deckEditor.cards.length !== 5) return;
+            if (els.deckEditorSaveBtn) els.deckEditorSaveBtn.disabled = true;
+            if (els.deckEditorStatus) {
+                els.deckEditorStatus.innerText = 'Saving deck...';
+                els.deckEditorStatus.classList.remove('error');
+            }
+            try {
+                const name = (els.deckEditorName && els.deckEditorName.value.trim()) || state.deckEditor.name || 'Sweepy Deck';
+                const res = await apiJson('/api/local-decks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: state.deckEditor.id,
+                        name,
+                        support_card_ids: state.deckEditor.cards.map(card => Number(card.id)),
+                        deck_id: 1
+                    })
+                });
+                if (!res.success) throw new Error(res.detail || 'Deck save failed');
+                const nonLocal = (dashData.decks || []).filter(deck => !deck.local);
+                dashData.decks = nonLocal.concat((res.decks || []).map(deck => ({
+                    ...deck,
+                    cards: (deck.cards || []).map(enrichDeckCard)
+                })));
+                dashData.validDecks = dashData.decks.filter(isValidDeck);
+                renderDecks(dashData.validDecks);
+                attachDeckHandlers();
+                if (els.deckEditorStatus) els.deckEditorStatus.innerText = 'Deck saved';
+            } catch (e) {
+                if (els.deckEditorStatus) {
+                    els.deckEditorStatus.innerText = e.message || 'Deck save failed';
+                    els.deckEditorStatus.classList.add('error');
+                }
+            } finally {
+                renderDeckEditor();
+            }
         }
         function renderFactors(factors) {
             const star = String.fromCharCode(9733);
@@ -2243,12 +3645,35 @@ const els = {
                 </div>`;
             }).join('');
         }
+        function renderParentTreeNode(node, role) {
+            const cardId = Number(node && node.card_id) || 0;
+            if (!cardId) {
+                return `<div class="parent-tree-node parent-tree-node-empty" data-role="${role}">
+                    <span class="parent-tree-placeholder">?</span>
+                </div>`;
+            }
+            return `<div class="parent-tree-node" data-role="${role}">
+                <img src="/api/images/${cardId}.png" onerror="hideBrokenImage(this)">
+            </div>`;
+        }
         function renderParents(parents) {
             els.parentGrid.innerHTML = parents.map(parent => {
-                const imgId = parent.card_id || '100101';
-                return `<div class="grid-card">
+                const tree = parent.tree || {};
+                const selfNode = tree.self || { card_id: parent.card_id, name: parent.name };
+                const imgId = (selfNode.card_id || parent.card_id) || '100101';
+                return `<div class="grid-card parent-card">
                     <div class="rank-badge">${rankMap[parent.rank] || '??'}</div>
-                    <img src="/api/images/${imgId}.png" onerror="hideBrokenImage(this)">
+                    <div class="parent-tree">
+                        ${renderParentTreeNode(selfNode, 'self')}
+                        <svg class="parent-tree-lines" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+                            <line x1="50" y1="0" x2="22" y2="24"></line>
+                            <line x1="50" y1="0" x2="78" y2="24"></line>
+                        </svg>
+                        <div class="parent-tree-row">
+                            ${renderParentTreeNode(tree.p1, 'p1')}
+                            ${renderParentTreeNode(tree.p2, 'p2')}
+                        </div>
+                    </div>
                     <div class="sparks-tooltip" style="--spark-bg: url('/api/images/${imgId}.png')">
                         <div class="sparks-tooltip-title"></div>
                         <div class="sparks-tooltip-scroll">
@@ -2258,7 +3683,6 @@ const els = {
                         </div>
                     </div>
                     <div class="grid-card-overlay">
-                        <span class="grid-card-kicker">ID: ${parent.instance_id || '?'}</span>
                         <span class="grid-card-name">${parent.name || 'Unknown'}</span>
                     </div>
                 </div>`;
@@ -2274,16 +3698,21 @@ const els = {
             }).join('');
         }
         function renderSupports(supports) {
+            const selected = new Set((state.deckEditor.cards || []).map(card => String(card.id)));
             els.cardGrid.innerHTML = supports.map(card => {
                 const imgId = card.id || '10001';
-                return `<div class="grid-card support-card">
+                const isSelected = selected.has(String(card.id));
+                return `<div class="grid-card support-card ${isSelected ? 'deck-pick-selected' : ''}" data-card-id="${escapeAttr(card.id)}">
                     <img src="/api/images/${imgId}.png" onerror="hideBrokenImage(this)">
                     <div class="grid-card-overlay">
-                        <span class="grid-card-kicker">${(card.rarity || '?') + ' | ' + (card.type || '?')}</span>
-                        <span class="grid-card-name">${card.name || 'Unknown'}</span>
+                        <span class="grid-card-kicker">${escapeHtml((card.rarity || '?') + ' | ' + (card.type || '?'))} · LB${card.limit_break_count ?? '?'}</span>
+                        <span class="grid-card-name">${escapeHtml(card.name || 'Unknown')}</span>
                     </div>
                 </div>`;
             }).join('');
+            document.querySelectorAll('#card-grid .support-card').forEach((element, index) => {
+                element.addEventListener('click', () => toggleDeckEditorCard(supports[index]));
+            });
         }
         function showDashboardView(data) {
             document.body.classList.add('dashboard-mode');
@@ -2380,9 +3809,17 @@ const els = {
 
         async function renderDashboard(data, options = {}) {
             dashData = data;
-            dashData.validDecks = data.decks.filter(isValidDeck);
+            dashData.decks = (data.decks || []).map(deck => deck.local ? {
+                ...deck,
+                cards: (deck.cards || []).map(enrichDeckCard)
+            } : deck);
+            dashData.validDecks = dashData.decks.filter(isValidDeck);
             dashData.friends = data.friends || [];
             dashData.friendExcludeIds = data.friendExcludeIds || [];
+            if (els.lastSessionBanner) {
+                els.lastSessionBanner.style.display = 'none';
+                els.lastSessionBanner.innerHTML = '';
+            }
             showDashboardView(data);
             renderCounts(data);
             renderDecks(dashData.validDecks);
@@ -2394,16 +3831,24 @@ const els = {
             autoLoadCareerSelection();
 
             await loadPresets();
+            await fetchEventBoostSettings();
             if (!dashData.friends.length) {
                 loadFriends(false);
+                loadFriendVeterans(false);
             } else {
                 renderFriends();
+                if ((dashData.friendVeterans || []).length === 0) {
+                    loadFriendVeterans(false);
+                } else {
+                    renderFriendVeterans();
+                }
             }
             bindSparkTooltips();
             attachSelectionHandlers();
             bindRaceHandlers();
             bindPresetHandlers();
             renderTeamPanel();
+            updateAdvisorRecommendations();
 
             startRunnerPolling();
             await waitForDomPaint(2);
@@ -2415,17 +3860,87 @@ const els = {
             }
         }
 
+        function formatRelativeTime(iso) {
+            if (!iso) return '';
+            const then = Date.parse(iso);
+            if (isNaN(then)) return '';
+            const deltaSec = Math.max(0, Math.round((Date.now() - then) / 1000));
+            if (deltaSec < 60) return 'just now';
+            if (deltaSec < 3600) return `${Math.round(deltaSec / 60)}m ago`;
+            if (deltaSec < 86400) return `${Math.round(deltaSec / 3600)}h ago`;
+            return `${Math.round(deltaSec / 86400)}d ago`;
+        }
+        function renderLastSessionBanner(cache) {
+            const el = els.lastSessionBanner;
+            if (!el) return;
+            if (!cache || (!cache.viewer_id && !cache.selected_preset && !cache.career)) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+                return;
+            }
+            const pills = [];
+            if (cache.viewer_id) {
+                pills.push(`<span class="last-session-banner-pill">Viewer <strong>${escapeHtml(cache.viewer_id)}</strong></span>`);
+            }
+            if (cache.career && cache.career.name) {
+                const turn = cache.career.turn ? ` · T${escapeHtml(cache.career.turn)}` : '';
+                const active = cache.career.active ? ' · active' : '';
+                pills.push(`<span class="last-session-banner-pill">${escapeHtml(cache.career.name)}${turn}${active}</span>`);
+            }
+            if (cache.selected_preset) {
+                pills.push(`<span class="last-session-banner-pill">preset <strong>${escapeHtml(cache.selected_preset)}</strong></span>`);
+            }
+            const when = formatRelativeTime(cache.last_login_at);
+            if (when) {
+                pills.push(`<span class="last-session-banner-pill">${escapeHtml(when)}</span>`);
+            }
+            if (!pills.length) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+                return;
+            }
+            el.innerHTML =
+                `<span class="last-session-banner-title">Last session</span>` +
+                `<div class="last-session-banner-row">${pills.join('')}</div>`;
+            el.style.display = 'block';
+        }
+        async function fetchSessionCache() {
+            try {
+                const data = await apiJson('/api/session-cache');
+                if (data && data.success) {
+                    state.lastSessionCache = data.cache || {};
+                }
+            } catch (e) {}
+            return state.lastSessionCache || {};
+        }
+        async function loadAndRenderSessionCache() {
+            const cache = await fetchSessionCache();
+            renderLastSessionBanner(cache);
+        }
+        async function persistSelectedPresetToCache(name) {
+            try {
+                await apiJson('/api/session-cache', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selected_preset: name || '' })
+                });
+            } catch (e) {}
+        }
+
         async function restoreSession() {
+            await fetchSessionCache();
             try {
                 const data = await apiJson('/api/session?t=' + Date.now());
                 if (data && data.success) await renderDashboard(data, { animateIntro: true, waitForIntro: false });
                 else {
                     hideNavbar();
                     setLoadingScreen(false);
+                    renderLastSessionBanner(state.lastSessionCache);
                 }
             } catch (e) {
                 hideNavbar();
                 setLoadingScreen(false);
+                renderLastSessionBanner(state.lastSessionCache);
             }
         }
         bindDelayControls();

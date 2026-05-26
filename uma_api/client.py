@@ -780,6 +780,31 @@ class UmaClient:
             payload['exclude_viewer_id_array'] = exclude_viewer_ids
         return self.call('pre_single_mode/index', payload)
 
+    def _call_first_supported(self, endpoints, payload):
+        last_error = None
+        for endpoint in endpoints:
+            try:
+                return self.call(endpoint, payload)
+            except Exception as exc:
+                last_error = exc
+        raise last_error or RuntimeError("No supported endpoint")
+
+    def follow_user(self, viewer_id):
+        payload = {'target_viewer_id': int(viewer_id)}
+        return self._call_first_supported((
+            'friend/follow',
+            'friend/follow_user',
+            'friend/request',
+        ), payload)
+
+    def unfollow_user(self, viewer_id):
+        payload = {'target_viewer_id': int(viewer_id)}
+        return self._call_first_supported((
+            'friend/unfollow',
+            'friend/delete',
+            'friend/remove',
+        ), payload)
+
     def start_career(self, card_id, support_card_ids, friend_viewer_id, friend_card_id,
                      parent_id_1, parent_id_2, scenario_id, deck_id=1, use_tp=30,
                      tp_info=None, current_money=0, succession_rank_point=0,

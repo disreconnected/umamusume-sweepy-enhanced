@@ -163,6 +163,27 @@ class MantStrategy(ScenarioStrategy):
         conserve = self._summer_conserve_command(enabled, turn, vital, best_score, preset, rest, recreation)
         if conserve:
             return conserve
+        # UG strategy: when the best training is meaningfully below the
+        # "+40 total stats" rule of thumb AND we still have race headroom in
+        # the preset's race budget, prefer to skip training (returning None
+        # lets the race planner / outer scenario hand back control). The
+        # caller already evaluates the race planner first, so by here we know
+        # no race was offered for this turn — but we still penalise a weak
+        # training to avoid burning the turn on +18-stat junk. We do this only
+        # outside summer camp (camp turns are precious enough to take any
+        # rainbow), pre-finale (so the last 3 turns don't drop), and only
+        # when we can rest safely (need a fallback to consume the turn).
+        train_min_gain = float(preset.get("train_min_total_stat_gain") or 0)
+        if (
+            train_min_gain > 0
+            and rest
+            and turn <= 69
+            and turn not in SUMMER_CAMP_TURNS
+            and best_score < 0.12
+        ):
+            best_total_gain = self._total_stat_gain(best)
+            if best_total_gain > 0 and best_total_gain < train_min_gain * 0.55:
+                return rest
         return best
 
     def _rest_command(self, commands):
@@ -255,6 +276,11 @@ class MantStrategy(ScenarioStrategy):
         weights = self._period_row(preset.get("score_value"), turn, [0.11, 0.10, 0.006, 0.09])
         base = preset.get("base_score") or [0, 0, 0, 0, 0]
         targets = preset.get("expect_attribute") or [9999, 9999, 9999, 9999, 9999]
+        # min_stats: when a stat is under its floor, multiply that stat's
+        # training gain score so the bot prioritises catching up. A value of
+        # 0 (the default) means no floor and leaves scoring unchanged.
+        min_stats = preset.get("min_stats") or [0, 0, 0, 0, 0]
+        min_stats_boost = float(preset.get("min_stats_boost") or 1.6)
         idx = TRAINING_COMMANDS.get(command.get("command_id"), 0)
         score = float(base[idx] if idx < len(base) else 0)
         w_lv1 = float(weights[0] if len(weights) > 0 else 0.11)
@@ -312,9 +338,18 @@ class MantStrategy(ScenarioStrategy):
             
             stat_gain_score = value * float(stat_mult[target] if target < len(stat_mult) else 0.01)
             cap = float(targets[target] if target < len(targets) else 9999)
+            floor = float(min_stats[target] if target < len(min_stats) else 0)
+            current_stat = self._current_stat(chara, target) if target < 5 else 0.0
+            if floor > 0 and target < 5 and current_stat < floor and value > 0:
+                stat_gain_score *= min_stats_boost
+            # UG strategy: rank_score scales harder on stats near 1000
+            # (MaybeVoid Taiki Shuttle commentary). Apply a small +8% bonus
+            # when the stat is in [820, 1060]. Cheap to encode and keeps the
+            # bot from drifting away from sub-1000 stats too early.
+            if value > 0 and target < 5 and 820 <= current_stat <= 1060:
+                stat_gain_score *= 1.08
             if cap > 0 and target < 5:
-                current = self._current_stat(chara, target)
-                ratio = current / cap
+                ratio = current_stat / cap
                 if ratio > 1.0:
                     stat_gain_score *= 0.0
                 elif ratio > 0.97:
@@ -365,6 +400,20 @@ class MantStrategy(ScenarioStrategy):
     def _current_stat(self, chara, target):
         keys = ["speed", "stamina", "power", "guts", "wiz", "skill_point"]
         return float(chara.get(keys[target], 0) or 0)
+
+    def _total_stat_gain(self, command):
+        """Sum the positive stat deltas a training would produce, ignoring
+        energy/skill-point side effects. Used by the UG-strategy guard in
+        `_best_command` to detect "junk" trainings worth resting through."""
+        total = 0.0
+        for item in command.get("params_inc_dec_info_array") or []:
+            target = STAT_TARGETS.get(item.get("target_type"))
+            if target is None or target >= 5:
+                continue
+            value = float(item.get("value") or 0)
+            if value > 0:
+                total += value
+        return total
 
     def _team_command(self, data, command_id):
         team_data = data.get("team_data_set") or {}

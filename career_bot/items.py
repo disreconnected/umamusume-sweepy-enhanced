@@ -322,7 +322,7 @@ class MantItemManager:
         if owned.get("Energy Drink MAX", 0) > 0 and vital <= 1:
             targets.append(("Energy Drink MAX", 1))
 
-        cleat_choice = self._old_ui_cleat_before_race(owned, turn, program_id, race_planner)
+        cleat_choice = self._old_ui_cleat_before_race(owned, turn, program_id, race_planner, preset)
         is_climax_race = turn in CLIMAX_RACE_TURNS
         is_g1 = self._is_g1_program(program_id, race_planner)
         use_gear = cleat_choice is not None or is_climax_race or is_g1 or turn > SUMMER_CAMP_2_START
@@ -480,6 +480,12 @@ class MantItemManager:
                 eff_t = 999 if charm_stop else min(eff_t, base_t - charm_owned)
             elif slug in {"plain_cupcake", "berry_sweet_cupcake"}:
                 eff_t = min(eff_t, base_t - cupcake_shift)
+            elif slug == "empowering_megaphone" and self._empowering_megaphone_shortfall(owned, preset, current_turn) > 0:
+                eff_t = 1
+            elif slug == "motivating_megaphone" and self._empowering_megaphone_shortfall(owned, preset, current_turn) > 0:
+                eff_t = min(eff_t, 2)
+            elif slug == "reset_whistle":
+                eff_t = min(eff_t, 2 if owned.get("Reset Whistle", 0) < 2 else 6)
             elif slug in {"artisan_cleat_hammer", "master_cleat_hammer"}:
                 eff_t = 999
             effective_rows.append((max(1, eff_t), name, row))
@@ -630,7 +636,7 @@ class MantItemManager:
         race_inst = str(info.get("race_instance_id") or "")
         return race_inst.startswith("1")
 
-    def _old_ui_cleat_before_race(self, owned, turn, program_id, race_planner):
+    def _old_ui_cleat_before_race(self, owned, turn, program_id, race_planner, preset=None):
         SUMMER_CAMP_2_START = 60
         CLASSIC_YEAR_END = 48
         SENIOR_YEAR_END = 72
@@ -638,7 +644,15 @@ class MantItemManager:
 
         master_qty = owned.get("Master Cleat Hammer", 0)
         artisan_qty = owned.get("Artisan Cleat Hammer", 0)
+        reserve_master = self._master_hammer_reserve(preset)
         if master_qty + artisan_qty <= 0:
+            return None
+
+        if 70 <= turn <= SENIOR_YEAR_END:
+            if master_qty > 0:
+                return "Master Cleat Hammer"
+            if artisan_qty > 0:
+                return "Artisan Cleat Hammer"
             return None
 
         if turn in CLIMAX_RACE_TURNS:
@@ -652,13 +666,14 @@ class MantItemManager:
             total = master_qty + artisan_qty
             if total <= 2:
                 return None
-            reserve_total = min(2, total)
-            reserve_master = min(master_qty, reserve_total)
-            spare_master = master_qty - reserve_master
-            spare_artisan = artisan_qty - (reserve_total - reserve_master)
+            reserve_total = min(max(2, reserve_master), total)
+            held_master = min(master_qty, reserve_master)
+            held_artisan = max(0, reserve_total - held_master)
+            spare_master = master_qty - held_master
+            spare_artisan = artisan_qty - held_artisan
 
             is_senior = turn <= SENIOR_YEAR_END
-            if is_senior and master_qty < 3 and spare_artisan > 0:
+            if is_senior and master_qty < reserve_master and spare_artisan > 0:
                 return "Artisan Cleat Hammer"
             if spare_master > 0:
                 return "Master Cleat Hammer"
@@ -670,11 +685,9 @@ class MantItemManager:
             return None
 
         is_senior = CLASSIC_YEAR_END < turn <= SENIOR_YEAR_END
-        if is_senior and master_qty < 3:
+        if is_senior and master_qty <= reserve_master:
             if artisan_qty > 0:
                 return "Artisan Cleat Hammer"
-            if master_qty > 0:
-                return "Master Cleat Hammer"
             return None
 
         if master_qty > 0:
@@ -690,16 +703,18 @@ class MantItemManager:
         master_qty = owned.get("Master Cleat Hammer", 0)
         artisan_qty = owned.get("Artisan Cleat Hammer", 0)
         total_cleats = master_qty + artisan_qty
-        is_senior = CLASSIC_YEAR_END < current_turn <= SENIOR_YEAR_END
+        is_senior = current_turn >= 49 and current_turn <= SENIOR_YEAR_END
         is_climax = current_turn > SENIOR_YEAR_END
         if not (is_senior or is_climax):
             return None
 
         available_by_name = {name: row for name, row in available}
         if is_senior:
-            if total_cleats >= 2:
+            target_master = 3
+            if total_cleats >= target_master and master_qty >= target_master:
                 return None
-            for candidate in ("Master Cleat Hammer", "Artisan Cleat Hammer"):
+            candidates = ("Master Cleat Hammer", "Artisan Cleat Hammer") if master_qty < target_master else ("Artisan Cleat Hammer",)
+            for candidate in candidates:
                 row = available_by_name.get(candidate)
                 if not row:
                     continue
@@ -723,6 +738,36 @@ class MantItemManager:
                 continue
             return row
         return None
+
+    def _master_hammer_reserve(self, preset):
+        try:
+            return max(0, int((preset or {}).get("reserve_master_hammer_final3") or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _empowering_megaphone_reserve(self, owned, preset, turn):
+        try:
+            reserve = max(0, int((preset or {}).get("reserve_megaphone_summer") or 0))
+        except (TypeError, ValueError):
+            reserve = 0
+        if reserve <= 0:
+            return 0
+        if turn < 36:
+            return min(reserve, int(owned.get("Empowering Megaphone", 0) or 0))
+        if 41 <= turn < 60:
+            return min(reserve, int(owned.get("Empowering Megaphone", 0) or 0))
+        return 0
+
+    def _empowering_megaphone_shortfall(self, owned, preset, turn):
+        try:
+            reserve = max(0, int((preset or {}).get("reserve_megaphone_summer") or 0))
+        except (TypeError, ValueError):
+            reserve = 0
+        if reserve <= 0:
+            return 0
+        if turn < 36 or 41 <= turn < 60:
+            return max(0, reserve - int(owned.get("Empowering Megaphone", 0) or 0))
+        return 0
 
     def use_items(self, client, state, preset, best_command=None, status=None, race_planner=None):
         data = state.get("data") or {}
@@ -946,10 +991,12 @@ class MantItemManager:
         cfg.setdefault("tier_count", 8)
         cfg.setdefault("tier_thresholds", {"3": 31, "7": 100, "8": 99999999999})
         cfg.setdefault("charm_failure_rate", 15)
-        cfg.setdefault("mega_small_threshold", 11)
-        cfg.setdefault("mega_medium_threshold", 21)
-        cfg.setdefault("mega_large_threshold", 35)
+        cfg.setdefault("mega_small_threshold", 8)
+        cfg.setdefault("mega_medium_threshold", 16)
+        cfg.setdefault("mega_large_threshold", 28)
         cfg.setdefault("mega_late_buy_buffer", 5)
+        cfg.setdefault("energy_recovery_threshold", 45)
+        cfg.setdefault("whistle_score_threshold", 45)
         cfg.setdefault("training_weights_threshold", 40)
         return cfg
 
@@ -1012,7 +1059,7 @@ class MantItemManager:
         if gap < 20:
             return result
         cfg = self._mant_cfg(preset)
-        threshold = int(cfg.get("energy_recovery_threshold") or 30)
+        threshold = int(cfg.get("energy_recovery_threshold") or 45)
         if hp > threshold:
             return result
 
@@ -1022,7 +1069,7 @@ class MantItemManager:
             if qty > 0:
                 candidates.append({"name": name, "value": value, "qty": qty})
 
-        candidates.sort(key=lambda x: x["value"], reverse=True)
+        candidates.sort(key=lambda x: (x["name"] == "Royal Kale Juice", -x["value"]))
 
         remaining_gap = gap
         for c in candidates:
@@ -1058,7 +1105,7 @@ class MantItemManager:
 
         score = self._command_stat_gain(best_command)
         cfg = self._mant_cfg(preset)
-        threshold = int(cfg.get("whistle_score_threshold") or 35)
+        threshold = int(cfg.get("whistle_score_threshold") or 45)
         if score < threshold and turn <= 72:
              return ("Reset Whistle", 1)
         return None
@@ -1093,13 +1140,17 @@ class MantItemManager:
         slots_left = self._remaining_megaphone_slots(data, turn, race_planner, preset)
         owned_count = self._owned_megaphone_count(owned)
         inventory_pressure = slots_left > 0 and owned_count >= slots_left
-        has_upgrade_pair = owned.get("Motivating Megaphone", 0) > 0 and owned.get("Empowering Megaphone", 0) > 0 and slots_left >= 2
+        empowering_spare = int(owned.get("Empowering Megaphone", 0) or 0) - self._empowering_megaphone_reserve(owned, preset, turn)
+        has_empowering = empowering_spare > 0
+        has_upgrade_pair = owned.get("Motivating Megaphone", 0) > 0 and has_empowering and slots_left >= 2
 
         target_tier = 0
         if current_mega_tier <= 0:
             if has_upgrade_pair and score >= medium_threshold:
                 return ("Motivating Megaphone", 1)
-            if score >= large_threshold and owned.get("Empowering Megaphone", 0) > 0:
+            if score >= large_threshold and has_empowering:
+                return ("Empowering Megaphone", 1)
+            if turn >= 65 and score >= medium_threshold and has_empowering:
                 return ("Empowering Megaphone", 1)
             if score >= medium_threshold and owned.get("Motivating Megaphone", 0) > 0:
                 return ("Motivating Megaphone", 1)
@@ -1108,7 +1159,7 @@ class MantItemManager:
             if inventory_pressure or dump_mode:
                 if has_upgrade_pair:
                     return ("Motivating Megaphone", 1)
-                if owned.get("Empowering Megaphone", 0) > 0:
+                if has_empowering:
                     return ("Empowering Megaphone", 1)
                 if score >= medium_threshold and owned.get("Motivating Megaphone", 0) > 0:
                     return ("Motivating Megaphone", 1)
@@ -1118,7 +1169,7 @@ class MantItemManager:
                     return ("Coaching Megaphone", 1)
                 if owned.get("Motivating Megaphone", 0) > 0:
                     return ("Motivating Megaphone", 1)
-                if owned.get("Empowering Megaphone", 0) > 0:
+                if has_empowering:
                     return ("Empowering Megaphone", 1)
             else:
                 if score >= large_threshold:
@@ -1136,7 +1187,7 @@ class MantItemManager:
             if score >= large_threshold * 1.1:
                 target_tier = 3
 
-        if target_tier >= 3 and current_mega_tier < 3 and owned.get("Empowering Megaphone", 0) > 0:
+        if target_tier >= 3 and current_mega_tier < 3 and has_empowering:
             return ("Empowering Megaphone", 1)
         if target_tier >= 2 and current_mega_tier < 2 and owned.get("Motivating Megaphone", 0) > 0:
             return ("Motivating Megaphone", 1)
@@ -1271,8 +1322,16 @@ class MantItemManager:
         return result
 
     def _skip_buy(self, name, owned, preset=None, turn=0, budget=0, data=None, race_planner=None):
-        if name in MEGAPHONE_TIERS and self._megaphone_buy_surplus(data or {}, owned, turn, race_planner, preset):
+        if (
+            name in MEGAPHONE_TIERS
+            and self._empowering_megaphone_shortfall(owned, preset, int(turn or 0)) <= 0
+            and self._megaphone_buy_surplus(data or {}, owned, turn, race_planner, preset)
+        ):
             return True
+        if name == "Reset Whistle":
+            limit = 2 if int(turn or 0) < 60 else 1
+            if owned.get(name, 0) >= limit:
+                return True
         if name in CURE_ITEMS:
             if owned.get(name, 0) > 0 or (name != AILMENT_CURE_ALL and owned.get(AILMENT_CURE_ALL, 0) > 0):
                 return True

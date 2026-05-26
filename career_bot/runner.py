@@ -286,7 +286,13 @@ class CareerRunner:
 
                     self._record_action(decision, chara)
 
-                    state = self._buy_skills(client, state, preset, True)
+                    # UG-AUTO-SKILL-BUY DISABLED: user reported the auto-picker was
+                    # buying suboptimal skills. Re-enable once we tighten the
+                    # selection logic in career_bot/skills.py. Tracked in
+                    # context.md §6.8. Reactivate by uncommenting the
+                    # `state = self._buy_skills(...)` lines flagged with the
+                    # same marker below.
+                    # state = self._buy_skills(client, state, preset, True)
 
                     data = state.get("data") or {}
                     if data.get("race_start_info"):
@@ -302,8 +308,9 @@ class CareerRunner:
 
                     chara = (state.get("data") or {}).get("chara_info") or {}
                     if int(chara.get("skill_point") or 0) > 200:
-                        print(f"SP still high ({chara.get('skill_point')}), retrying final purchase...")
-                        state = self._buy_skills(client, state, preset, True)
+                        print(f"SP still high ({chara.get('skill_point')}); auto-buy is OFF — buy manually before confirming finish.")
+                        # UG-AUTO-SKILL-BUY DISABLED (see marker above).
+                        # state = self._buy_skills(client, state, preset, True)
 
                     try:
                         state = client.finish_career(current_turn=decision.payload["current_turn"], is_force_delete=False)
@@ -320,8 +327,11 @@ class CareerRunner:
                     break
                 
                 if decision.action not in {"finish"}:
-                    state = self._buy_skills(client, state, preset, False)
-                
+                    # UG-AUTO-SKILL-BUY DISABLED (see marker in finish branch).
+                    # Mid-career opportunistic purchases off until selection logic is tightened.
+                    # state = self._buy_skills(client, state, preset, False)
+                    pass
+
                 self._advance(decision.action)
         except Exception as exc:
             import traceback

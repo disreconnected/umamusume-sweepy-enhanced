@@ -63,6 +63,20 @@ class RacePlanner:
                     result.append(pid)
         return result
 
+    def planned_programs_before_turn(self, preset, turn):
+        current_turn = int(turn or 0)
+        if current_turn <= 0:
+            return []
+        result = []
+        seen = set()
+        for pid in self.wanted_programs(preset):
+            info = self.program.get(int(pid or 0)) or {}
+            race_turn = int(info.get("turn") or 0)
+            if race_turn and race_turn < current_turn and pid not in seen:
+                seen.add(pid)
+                result.append(pid)
+        return result
+
     def available_programs(self, state):
         data = state.get("data") or {}
         rca = data.get("race_condition_array") or []
@@ -125,6 +139,14 @@ class RacePlanner:
     
         wanted = self.wanted_programs(preset, turn)
         valid_wanted = [pid for pid in wanted if pid in available and (turn, pid) not in self.rejected]
+        max_races = int((preset or {}).get("max_races") or 0)
+        if valid_wanted and max_races > 0 and turn <= 72:
+            # max_races includes the scenario finals, while extra_race_list is
+            # mostly pre-finals. Keep a small reserve so imported donor routes
+            # do not crowd out late training when the list is too dense.
+            prefinal_budget = max(0, max_races - 3)
+            if len(self.planned_programs_before_turn(preset, turn)) >= prefinal_budget:
+                valid_wanted = []
         
         if not valid_wanted:
             chara = data.get("chara_info") or {}

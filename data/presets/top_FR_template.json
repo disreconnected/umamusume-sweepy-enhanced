@@ -1,0 +1,42 @@
+{
+  "name": "top_FR_template",
+  "running_style": 1,
+  "learn_skill_list": [
+    [
+      "Early Lead",
+      "Escape Artist",
+      "Leader's Pride",
+      "Front Runner Corners O",
+      "Front Runner Straightaways O",
+      "Unshakable Stance",
+      "Concentration",
+      "Sprint Straightaways O",
+      "Mile Straightaways O"
+    ]
+  ],
+  "learn_skill_blacklist": [],
+  "extra_race_list": [],
+  "learn_skill_threshold": 888,
+  "min_stats": [
+    1200,
+    1100,
+    500,
+    0,
+    400
+  ],
+  "max_stats": [
+    1200,
+    1200,
+    1200,
+    1200,
+    1200
+  ],
+  "support_card_ids": [],
+  "friend_card_id": 0,
+  "friend_viewer_id": 0,
+  "trainee_card_id": 100501,
+  "parent_id_1": 0,
+  "parent_id_2": 0,
+  "imported_trainer_name": "(hand-built FR breeding template)",
+  "imported_at": "2026-05-25T19:35:00Z"
+}
