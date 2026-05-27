@@ -583,6 +583,13 @@ class UmaClient:
         res = unpack(resp.text.strip(), self.udid_str)
         dh = res.get('data_headers', {})
         rc = dh.get('result_code', 0)
+        print(f"[{ep}] data_headers: {dh}")
+        
+        if rc == 1:
+            new_vid = dh.get('viewer_id')
+            if new_vid and int(new_vid) != self.viewer_id:
+                print(f"Aligning viewer_id from successful response: {self.viewer_id} -> {new_vid}")
+                self.viewer_id = int(new_vid)
         
         self.api_log("RES", ep, res, req_id)
         
@@ -627,6 +634,16 @@ class UmaClient:
             err_msg = f'API error {rc} on {ep}: {err_detail}'
             if not (rc == 102 and ep in {"single_mode_free/race_end", "single_mode_free/race_out"}):
                 print(err_msg)
+                try:
+                    debug_info = {
+                        "endpoint": ep,
+                        "request_payload": payload,
+                        "response": res
+                    }
+                    with open("h:/Antigravity Repos/umamusume-sweepy-enhanced/debug_api_error.json", "w", encoding="utf-8") as f:
+                        json.dump(debug_info, f, indent=2, default=str)
+                except Exception as ex:
+                    print(f"Failed to write debug_api_error.json: {ex}")
             raise Exception(err_msg)
         if dh.get('sid') and isinstance(dh['sid'], str) and dh['sid'].strip():
             self.sid = next_sid(dh['sid'])
@@ -813,39 +830,43 @@ class UmaClient:
                      boost_story_event_id=0):
         if not tp_info:
             tp_info = {'current_tp': 100, 'max_tp': 100, 'max_recovery_time': 0}
-        if not parent_id_2 and rental_trained_chara_id:
-            parent_id_2 = rental_trained_chara_id
-        start_payload = {
-            'start_chara': {
-                'card_id': card_id,
-                'support_card_ids': support_card_ids,
-                'friend_support_card_info': {
-                    'viewer_id': friend_viewer_id,
-                    'support_card_id': friend_card_id
-                },
-                'succession_trained_chara_id_1': parent_id_1,
-                'succession_trained_chara_id_2': parent_id_2,
-                'rental_succession_trained_chara': {
-                    'viewer_id': rental_viewer_id,
-                    'trained_chara_id': rental_trained_chara_id,
-                    'is_circle_member': False,
-                    'is_event_rental': False
-                },
-                'scenario_id': scenario_id,
-                'selected_difficulty_info': {
-                    'difficulty_id': difficulty_id,
-                    'difficulty': difficulty,
-                    'is_boost': is_boost
-                },
-                'select_deck_id': deck_id,
-                'boost_story_event_id': boost_story_event_id,
-                'is_play_training_challenge': False
+        # If we are renting a parent, the second parent ID must not be passed in the succession_trained_chara_id_2 payload field
+        payload_parent_id_2 = 0 if rental_trained_chara_id else parent_id_2
+        start_chara = {
+            'card_id': card_id,
+            'support_card_ids': support_card_ids,
+            'friend_support_card_info': {
+                'viewer_id': friend_viewer_id,
+                'support_card_id': friend_card_id
             },
+            'succession_trained_chara_id_1': parent_id_1,
+            'succession_trained_chara_id_2': payload_parent_id_2,
+            'scenario_id': scenario_id,
+            'selected_difficulty_info': {
+                'difficulty_id': difficulty_id,
+                'difficulty': difficulty,
+                'is_boost': is_boost
+            },
+            'select_deck_id': deck_id,
+            'boost_story_event_id': boost_story_event_id,
+            'is_play_training_challenge': False
+        }
+        if rental_viewer_id and rental_trained_chara_id:
+            start_chara['rental_succession_trained_chara'] = {
+                'viewer_id': rental_viewer_id,
+                'trained_chara_id': rental_trained_chara_id,
+                'is_circle_member': False,
+                'is_event_rental': False
+            }
+        start_payload = {
+            'start_chara': start_chara,
             'tp_info': tp_info,
             'current_money': current_money,
             'use_tp': use_tp,
-            'current_succession_rank_point': succession_rank_point
+            'current_succession_rank_point': succession_rank_point,
         }
+        # Debug: log the payload before sending
+        self.api_log('REQ', 'single_mode_free/start_payload_debug', {'payload': start_payload})
         return self.call('single_mode_free/start', start_payload)
 
     def exec_command(self, command_type, command_id, current_turn, current_vital, command_group_id=0, select_id=0):

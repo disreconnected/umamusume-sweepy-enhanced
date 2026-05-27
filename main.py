@@ -538,6 +538,7 @@ def normalize_friend_veterans(data):
     decoded factors and parent lineage cards so the UI picker can show enough
     info for the user to pick the strongest veteran to borrow.
     """
+    global active_parent_rank_points
     rows = _extract_veteran_rows(data)
     if not rows:
         return [], "no_data"
@@ -574,6 +575,11 @@ def normalize_friend_veterans(data):
         if key in seen:
             continue
         seen.add(key)
+
+        active_parent_rank_points[int(trained_chara_id)] = {
+            'rank': int(row.get('rank') or 0),
+            'rank_score': int(row.get('rank_score') or 0)
+        }
 
         summary = summaries_by_viewer.get(viewer_id) or {}
         chara_name = chara_map.get(str(card_id), f"Unknown ({card_id})")
@@ -772,18 +778,89 @@ def prepare_runtime_preset_for_run(preset, req, chara_info=None):
     return tuned, tuned.get("_runtime_advisor") or {}
 
 
-def parent_rank_point(parent_id):
-    parent = active_parent_rank_points.get(int(parent_id))
-    if not parent:
+RANK_POINTS = {
+    1: 2,    # G
+    2: 4,    # G+
+    3: 6,    # F
+    4: 9,    # F+
+    5: 12,   # E
+    6: 16,   # E+
+    7: 20,   # D
+    8: 25,   # D+
+    9: 30,   # C
+    10: 36,  # C+
+    11: 42,  # B
+    12: 49,  # B+
+    13: 62,  # A
+    14: 73,  # A+
+    15: 82,  # S
+    16: 82,  # S+
+    17: 92,  # SS
+    18: 92,  # SS+
+    19: 103, # UG
+    20: 103, # UG+
+    21: 113, # UF
+    22: 113, # UF+
+    23: 124, # UE
+    24: 124, # UE+
+    25: 136, # UD
+    26: 136, # UD+
+    27: 148, # UC
+    28: 148, # UC+
+    29: 160, # UB
+    30: 160, # UB+
+    31: 173, # UA
+    32: 173, # UA+
+    33: 186, # US
+    34: 186, # US+
+    35: 200, # USS
+    36: 200, # USS+
+}
+
+def get_rank_points(rank: int) -> int:
+    """Return succession rank points based on the evaluation rank ID."""
+    if rank <= 0:
         return 0
-    rank = int(parent.get('rank') or 0)
-    if rank == 13:
-        return 62
-    return int(parent.get('rank_point') or parent.get('rank_score') or 0)
+    if rank in RANK_POINTS:
+        return RANK_POINTS[rank]
+    # Fallback extrapolation for extremely high ranks
+    return 200 + (rank - 36) * 7
+
+
+def parent_rank_point(parent_id):
+    parent_id = int(parent_id)
+    if not parent_id:
+        return 0
+    # Look in cache
+    parent = active_parent_rank_points.get(parent_id)
+    if parent:
+        return get_rank_points(int(parent.get('rank') or 0))
+    # Fallback to active_dashboard_data parents
+    if active_dashboard_data and active_dashboard_data.get('parents'):
+        for p in active_dashboard_data['parents']:
+            if int(p.get('instance_id') or 0) == parent_id:
+                rank = int(p.get('rank') or 0)
+                active_parent_rank_points[parent_id] = {
+                    'rank': rank,
+                    'rank_score': int(p.get('rank_score') or 0)
+                }
+                return get_rank_points(rank)
+    # Fallback to friendVeterans
+    if active_dashboard_data and active_dashboard_data.get('friendVeterans'):
+        for v in active_dashboard_data['friendVeterans']:
+            if int(v.get('trained_chara_id') or 0) == parent_id:
+                rank = int(v.get('rank') or 0)
+                active_parent_rank_points[parent_id] = {
+                    'rank': rank,
+                    'rank_score': int(v.get('rank_score') or 0)
+                }
+                return get_rank_points(rank)
+    return 0
 
 
 def selected_succession_rank_point(req):
-    selected_total = parent_rank_point(req.parent_id_1) + parent_rank_point(req.parent_id_2)
+    p2 = req.rental_chara_id if req.rental_chara_id else req.parent_id_2
+    selected_total = parent_rank_point(req.parent_id_1) + parent_rank_point(p2)
     if selected_total:
         return selected_total
     return active_start_state.get('succession_rank_point', 0)
@@ -2006,10 +2083,12 @@ async def run_career(req: RunCareerRequest):
                 req.parent_id_1 = int(preset["parent_id_1"])
             if not req.parent_id_2 and preset.get("parent_id_2"):
                 req.parent_id_2 = int(preset["parent_id_2"])
-            if not req.rental_viewer_id and preset.get("rental_chara_viewer_id"):
-                req.rental_viewer_id = int(preset["rental_chara_viewer_id"])
-            if not req.rental_chara_id and preset.get("rental_chara_id"):
-                req.rental_chara_id = int(preset["rental_chara_id"])
+            if not req.rental_viewer_id and not req.rental_chara_id:
+                preset_rvid = preset.get("rental_chara_viewer_id")
+                preset_rcid = preset.get("rental_chara_id")
+                if preset_rvid and preset_rcid:
+                    req.rental_viewer_id = int(preset_rvid)
+                    req.rental_chara_id = int(preset_rcid)
             started = start_career_from_request(req)
             if not started.get("success"):
                 return started
