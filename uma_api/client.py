@@ -276,7 +276,7 @@ def get_hwid(seed_string="default"):
 def check_deps():
     if not shutil.which('node'): raise Exception('node missing')
     if not os.path.exists(os.path.join(DIR, 'node_modules')):
-        subprocess.run(['npm', 'install', '--silent'], check=True, cwd=DIR)
+        subprocess.run(['npm', 'install', '--silent'], check=True, cwd=DIR, shell=(os.name == 'nt'))
 
 def get_ticket(u, p, c=''):
     global LAST_TICKET_GEN_RESULT
@@ -813,6 +813,8 @@ class UmaClient:
                      boost_story_event_id=0):
         if not tp_info:
             tp_info = {'current_tp': 100, 'max_tp': 100, 'max_recovery_time': 0}
+        if not parent_id_2 and rental_trained_chara_id:
+            parent_id_2 = rental_trained_chara_id
         start_payload = {
             'start_chara': {
                 'card_id': card_id,

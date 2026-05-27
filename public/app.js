@@ -3092,7 +3092,7 @@ const els = {
                 friend_viewer_id: Number(selection.friend.viewer_id),
                 friend_card_id: Number(selection.friend.support_card_id),
                 parent_id_1: Number(selection.veterans[0].instance_id),
-                parent_id_2: selection.veterans[1] ? Number(selection.veterans[1].instance_id) : 0,
+                parent_id_2: selection.veterans[1] ? Number(selection.veterans[1].instance_id) : (rentalParent ? Number(rentalParent.trained_chara_id) : 0),
                 rental_viewer_id: rentalParent ? Number(rentalParent.viewer_id) : 0,
                 rental_chara_id: rentalParent ? Number(rentalParent.trained_chara_id) : 0,
                 deck_id: Number(selection.deck.deck_id || selection.deck.id) || 1,
