@@ -61,6 +61,7 @@ class CareerRunner:
         self.race_planner = RacePlanner(base_dir)
         self.skill_buyer = SkillBuyer(base_dir)
         self.item_manager = MantItemManager()
+        self.consecutive_race_count = 0
         self.status = {
             "running": False,
             "preset": "",
@@ -113,6 +114,7 @@ class CareerRunner:
             self.race_planner = RacePlanner(self.base_dir)
             self.skill_buyer = SkillBuyer(self.base_dir)
             self.item_manager = MantItemManager()
+            self.consecutive_race_count = 0
             self.status = {
                 "running": True,
                 "preset": preset.get("name", ""),
@@ -156,6 +158,7 @@ class CareerRunner:
         with self.lock:
             data = dict(self.status)
             data["burn_clocks"] = self.burn_clocks
+            data["consecutive_race_count"] = self.consecutive_race_count
             return data
 
     def set_burn_clocks(self, value):
@@ -216,6 +219,10 @@ class CareerRunner:
                         break
                 
                 self._debug_turn(state, preset)
+                if isinstance(state, dict):
+                    state["consecutive_race_count"] = self.consecutive_race_count
+                    if "data" in state and isinstance(state["data"], dict):
+                        state["data"]["consecutive_race_count"] = self.consecutive_race_count
                 decision = strategy.next_decision(state, preset)
 
                 
@@ -232,6 +239,10 @@ class CareerRunner:
                     data = state.get("data") or {}
                     chara = data.get("chara_info") or {}
                     self._mark(turn=chara["turn"])
+                    if isinstance(state, dict):
+                        state["consecutive_race_count"] = self.consecutive_race_count
+                        if "data" in state and isinstance(state["data"], dict):
+                            state["data"]["consecutive_race_count"] = self.consecutive_race_count
                     decision = strategy.next_decision(state, preset)
 
                     if self.report:
@@ -258,6 +269,7 @@ class CareerRunner:
                     self._record_action(decision, chara)
                     try:
                         state = client.exec_command(**decision.payload)
+                        self.consecutive_race_count = 0
                         data = state.get("data") or {}
                         if data.get("unchecked_event_array"):
                             state = self._drain_events(client, strategy, state)
@@ -278,10 +290,12 @@ class CareerRunner:
 
                     self._record_action(decision, chara)
                     state = self._race(client, state, preset, decision.payload)
+                    self.consecutive_race_count += 1
                 elif decision.action == "race_progress":
 
                     self._record_action(decision, chara)
                     state = self._race_progress(client, decision.payload, preset)
+                    self.consecutive_race_count += 1
                 elif decision.action == "finish":
 
                     self._record_action(decision, chara)

@@ -42,36 +42,66 @@ def runtime_output_root():
 TRACE_DIR = runtime_output_root() / "trace_logs"
 
 TICKET_GEN_JS = """const SteamUser = require("steam-user");
+const fs = require("fs");
+const path = require("path");
 
 const args = process.argv.slice(2);
 let username = "";
 let password = "";
 let appid = 3224770;
 let code = "";
+let proxy = "";
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--username") username = args[++i];
   else if (args[i] === "--password") password = args[++i];
   else if (args[i] === "--appid") appid = parseInt(args[++i]);
   else if (args[i] === "--code") code = args[++i];
+  else if (args[i] === "--proxy") proxy = args[++i];
 }
 
 if (!username || !password) {
   process.stderr.write(
-    "Usage: node ticket_gen.js --username X --password Y [--code Z]\\n"
+    "Usage: node ticket_gen.js --username X --password Y [--code Z] [--proxy P]\\n"
   );
   process.exit(1);
 }
 
-const client = new SteamUser();
+const opts = {};
+if (proxy) {
+  if (proxy.startsWith("socks")) {
+    opts.socksProxy = proxy;
+  } else {
+    opts.httpProxy = proxy;
+  }
+}
+const client = new SteamUser(opts);
 
-const loginOpts = {
+const keyFilePath = path.join(process.cwd(), "data", "steam_login_key.json");
+
+let loginOpts = {
   accountName: username,
-  password: password,
 };
 
-if (code) {
-  loginOpts.twoFactorCode = code;
+let usedLoginKey = false;
+try {
+  if (fs.existsSync(keyFilePath)) {
+    const keyData = JSON.parse(fs.readFileSync(keyFilePath, "utf8"));
+    if (keyData.username === username && keyData.loginKey) {
+      loginOpts.loginKey = keyData.loginKey;
+      usedLoginKey = true;
+      process.stderr.write("Using cached Steam loginKey\\n");
+    }
+  }
+} catch (e) {
+  process.stderr.write("Error reading loginKey cache: " + e.message + "\\n");
+}
+
+if (!usedLoginKey) {
+  loginOpts.password = password;
+  if (code) {
+    loginOpts.twoFactorCode = code;
+  }
 }
 
 client.logOn(loginOpts);
@@ -83,7 +113,53 @@ client.on("steamGuard", (domain, callback) => {
   process.exit(2);
 });
 
+let receivedLoginKey = false;
+let sessionTicketResult = null;
+
+function checkExit() {
+  if (sessionTicketResult) {
+    if (usedLoginKey || receivedLoginKey) {
+      process.stdout.write(JSON.stringify(sessionTicketResult) + "\\n");
+      process.stderr.write("Ticket generated and credentials cached\\n");
+      setTimeout(() => process.exit(0), 500);
+    }
+  }
+}
+
+client.on("loginKey", (key) => {
+  try {
+    const dir = path.dirname(keyFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(keyFilePath, JSON.stringify({ username, loginKey: key }, null, 2), "utf8");
+    process.stderr.write("Steam loginKey cached successfully\\n");
+  } catch (e) {
+    process.stderr.write("Failed to save loginKey: " + e.message + "\\n");
+  }
+  receivedLoginKey = true;
+  checkExit();
+});
+
 client.on("error", (err) => {
+  if (usedLoginKey && (err.message === "InvalidPassword" || err.eresult === 15 || err.message.includes("InvalidPassword"))) {
+    process.stderr.write("Cached loginKey invalid/expired. Falling back to password logon...\\n");
+    try {
+      if (fs.existsSync(keyFilePath)) {
+        fs.unlinkSync(keyFilePath);
+      }
+    } catch (e) {}
+    usedLoginKey = false;
+    loginOpts = {
+      accountName: username,
+      password: password,
+    };
+    if (code) {
+      loginOpts.twoFactorCode = code;
+    }
+    client.logOn(loginOpts);
+    return;
+  }
   process.stderr.write("ERROR:" + err.message + "\\n");
   process.exit(1);
 });
@@ -92,22 +168,32 @@ client.on("loggedOn", () => {
   process.stderr.write(
     "Logged in as " + client.steamID.getSteamID64() + "\\n"
   );
-  client.createAuthSessionTicket(appid, (err, sessionTicket) => {
-    if (err) {
-      process.stderr.write("Ticket error: " + err.message + "\\n");
-      process.exit(1);
-    }
-    const buf = Buffer.isBuffer(sessionTicket) ? sessionTicket : sessionTicket.sessionTicket || sessionTicket;
-    const result = {
-      steam_id: client.steamID.getSteamID64(),
-      session_ticket: Buffer.from(buf).toString("hex").toUpperCase(),
-    };
-    process.stdout.write(JSON.stringify(result) + "\\n");
-    process.stderr.write(
-      "Ticket generated (" + Buffer.from(buf).length + " bytes)\\n"
-    );
-    setTimeout(() => process.exit(0), 500);
-  });
+  client.setPersona(1);
+  client.gamesPlayed(appid);
+  setTimeout(() => {
+    client.createAuthSessionTicket(appid, (err, sessionTicket) => {
+      if (err) {
+        process.stderr.write("Ticket error: " + err.message + "\\n");
+        process.exit(1);
+      }
+      const buf = Buffer.isBuffer(sessionTicket) ? sessionTicket : sessionTicket.sessionTicket || sessionTicket;
+      sessionTicketResult = {
+        steam_id: client.steamID.getSteamID64(),
+        session_ticket: Buffer.from(buf).toString("hex").toUpperCase(),
+      };
+      
+      // Safety exit timeout in case loginKey event never fires
+      setTimeout(() => {
+        if (!receivedLoginKey && !usedLoginKey) {
+          process.stderr.write("Warning: loginKey event timed out. Exiting anyway...\\n");
+        }
+        process.stdout.write(JSON.stringify(sessionTicketResult) + "\\n");
+        process.exit(0);
+      }, 5000);
+      
+      checkExit();
+    });
+  }, 1000);
 });
 """
 
@@ -278,11 +364,12 @@ def check_deps():
     if not os.path.exists(os.path.join(DIR, 'node_modules')):
         subprocess.run(['npm', 'install', '--silent'], check=True, cwd=DIR, shell=(os.name == 'nt'))
 
-def get_ticket(u, p, c=''):
+def get_ticket(u, p, c='', proxy_url=''):
     global LAST_TICKET_GEN_RESULT
     check_deps()
     cmd = ['node', '-e', TICKET_GEN_JS, '--', '--dummy', '--username', u, '--password', p]
     if c: cmd += ['--code', c]
+    if proxy_url: cmd += ['--proxy', proxy_url]
     
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, cwd=DIR)
     LAST_TICKET_GEN_RESULT = {
@@ -315,6 +402,8 @@ class UmaClient:
         self.auth_key_hex = cfg.get('auth_key', '')
         self.steam_id = str(cfg.get('steam_id', ''))
         self.steam_ticket = cfg.get('steam_session_ticket', '')
+        self.steam_username = cfg.get('steam_username', '')
+        self.steam_password = cfg.get('steam_password', '')
         
         self.device_id = cfg.get('device_id') or profile['device_id']
         self.device_name = cfg.get('device_name') or profile['device_name']
@@ -331,12 +420,19 @@ class UmaClient:
              pass
 
         self.sid = bytes(16)
+        self.is_logging_in = False
         self.cached_load_data = {}
         self.tp_info = {}
         self.coin_info = {}
         self.item_map = {}
         self.current_scenario_id = None
         self.session = requests.Session()
+        self.proxy_url = cfg.get('proxy_url', '')
+        if self.proxy_url:
+            self.session.proxies = {
+                "http": self.proxy_url,
+                "https": self.proxy_url,
+            }
         self.update_headers()
         self.api_jitter = dna_uniform(-0.02, 0.02)
 
@@ -452,19 +548,17 @@ class UmaClient:
         return bytes.fromhex(self.auth_key_hex)
 
     def has_captured_auth(self):
+        if self.steam_id and self.steam_ticket and self.udid_str:
+            return True
+            
         try:
             int(self.viewer_id)
-            bytes.fromhex(str(self.auth_key_hex))
+            if self.auth_key_hex and self.auth_key_hex != 'YOUR_AUTH_KEY_HERE':
+                bytes.fromhex(str(self.auth_key_hex))
+                return bool(self.viewer_id and self.udid_str and self.auth_key_hex)
         except (TypeError, ValueError):
-            return False
-        return bool(
-            self.viewer_id
-            and self.udid_str
-            and self.auth_key_hex
-            and self.auth_key_hex != 'YOUR_AUTH_KEY_HERE'
-            and self.steam_id
-            and self.steam_ticket
-        )
+            pass
+        return False
 
     def refresh_cached_account_state(self, data):
         if not data:
@@ -590,6 +684,7 @@ class UmaClient:
             if new_vid and int(new_vid) != self.viewer_id:
                 print(f"Aligning viewer_id from successful response: {self.viewer_id} -> {new_vid}")
                 self.viewer_id = int(new_vid)
+                self.regen_sid()
         
         self.api_log("RES", ep, res, req_id)
         
@@ -617,6 +712,17 @@ class UmaClient:
                 self.regen_sid()
             raise Exception(f'709 on {ep}')
         if rc != 1:
+            if rc == 102 and retry_208 > 0 and not getattr(self, "is_logging_in", False):
+                print(f"Session expired (102) on {ep}. Attempting to re-login...")
+                self.is_logging_in = True
+                try:
+                    self.login()
+                    self.is_logging_in = False
+                    return self.call(ep, args, retry_208=retry_208 - 1, retry_205=retry_205)
+                except Exception as login_exc:
+                    self.is_logging_in = False
+                    print(f"Automatic login after 102 failed: {login_exc}")
+
             if rc == 205 and retry_205 > 0:
                 print(f"205 on {ep}, retrying... ({retry_205} left)")
                 dna_sleep(0.14, 0.19, 0.166, 0.0083)
@@ -710,6 +816,11 @@ class UmaClient:
         self.session.close()
         self.session = requests.Session()
         self.session.headers.update(old_h)
+        if getattr(self, "proxy_url", None):
+            self.session.proxies = {
+                "http": self.proxy_url,
+                "https": self.proxy_url,
+            }
 
         for attempt in range(max_retries + 1):
             try:

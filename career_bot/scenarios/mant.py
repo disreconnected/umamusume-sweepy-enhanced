@@ -142,6 +142,47 @@ class MantStrategy(ScenarioStrategy):
             if medic and bad_status and vital <= ENERGY_MEDIC_GENERAL:
                 return medic
             return rest or recreation
+
+        consecutive_race_count = data.get("consecutive_race_count", 0)
+        max_consecutive_races = int(preset.get("max_consecutive_races") or 3)
+        if consecutive_race_count >= max_consecutive_races:
+            if medic and bad_status and vital <= ENERGY_MEDIC_GENERAL:
+                return medic
+
+            free = data.get("free_data_set") or {}
+            user_items = free.get("user_item_info_array") or []
+            owned_vitas = {2001: 0, 2002: 0, 2003: 0}
+            for row in user_items:
+                item_id = int(row.get("item_id") or 0)
+                qty = int(row.get("num") or row.get("current_num") or row.get("item_num") or 0)
+                if item_id in owned_vitas:
+                    owned_vitas[item_id] += qty
+            total_vita_recovery = (owned_vitas[2001] * 20) + (owned_vitas[2002] * 40) + (owned_vitas[2003] * 65)
+
+            valid_tiles = []
+            for cmd in training:
+                idx = TRAINING_COMMANDS.get(cmd.get("command_id"))
+                if idx in {0, 1, 2}:
+                    total_gain = self._total_stat_gain(cmd)
+                    if total_gain >= 30:
+                        fail_rate = int(cmd.get("failure_rate") or 0)
+                        simulated_fail = max(0, fail_rate - total_vita_recovery)
+                        if simulated_fail <= 20:
+                            score = self._score_command(cmd, data, chara, preset)
+                            valid_tiles.append((score, cmd))
+            if valid_tiles:
+                return max(valid_tiles, key=lambda row: row[0])[1]
+
+            wit_cmd = self._enabled_training_idx(enabled, 4)
+            if wit_cmd:
+                return wit_cmd
+
+            bonds = self._bond_map(chara)
+            if 6 in bonds and recreation:
+                return recreation
+
+            if rest:
+                return rest
         scored = [(self._score_command(cmd, data, chara, preset), cmd) for cmd in training]
         if 48 < turn <= 72:
             stat_keys = ["speed", "stamina", "power", "guts", "wiz"]
@@ -154,12 +195,31 @@ class MantStrategy(ScenarioStrategy):
             return medic
         if medic and bad_status and vital <= ENERGY_MEDIC_GENERAL:
             return medic
-        if turn in SUMMER_CAMP_TURNS and recreation and (vital <= rest_threshold or failure >= 35 or best_score < 0):
-            return recreation
-        if self._should_recreate(recreation, preset, turn, motivation, vital, best_score):
-            return recreation
-        if rest and (vital <= rest_threshold or failure >= 35 or best_score < 0):
-            return rest
+        bypass_rest = False
+        best_idx = TRAINING_COMMANDS.get(best.get("command_id"))
+        if best_idx in {0, 1, 2}:
+            best_total_gain = self._total_stat_gain(best)
+            if best_total_gain >= 30:
+                free = data.get("free_data_set") or {}
+                user_items = free.get("user_item_info_array") or []
+                owned_vitas = {2001: 0, 2002: 0, 2003: 0}
+                for row in user_items:
+                    item_id = int(row.get("item_id") or 0)
+                    qty = int(row.get("num") or row.get("current_num") or row.get("item_num") or 0)
+                    if item_id in owned_vitas:
+                        owned_vitas[item_id] += qty
+                total_vita_recovery = (owned_vitas[2001] * 20) + (owned_vitas[2002] * 40) + (owned_vitas[2003] * 65)
+                simulated_fail = max(0, failure - total_vita_recovery)
+                if simulated_fail <= 20:
+                    bypass_rest = True
+
+        if not bypass_rest:
+            if turn in SUMMER_CAMP_TURNS and recreation and (vital <= rest_threshold or failure >= 35 or best_score < 0):
+                return recreation
+            if self._should_recreate(recreation, preset, turn, motivation, vital, best_score):
+                return recreation
+            if rest and (vital <= rest_threshold or failure >= 35 or best_score < 0):
+                return rest
         conserve = self._summer_conserve_command(enabled, turn, vital, best_score, preset, rest, recreation)
         if conserve:
             return conserve
@@ -348,7 +408,11 @@ class MantStrategy(ScenarioStrategy):
             # bot from drifting away from sub-1000 stats too early.
             if value > 0 and target < 5 and 820 <= current_stat <= 1060:
                 stat_gain_score *= 1.08
-            if cap > 0 and target < 5:
+            abs_cap = float(preset.get("absolute_stat_cap") or 1100)
+            eff_cap = min(abs_cap, cap)
+            if value > 0 and target < 5 and current_stat >= eff_cap:
+                stat_gain_score = 0.0
+            elif cap > 0 and target < 5:
                 ratio = current_stat / cap
                 if ratio > 1.0:
                     stat_gain_score *= 0.0

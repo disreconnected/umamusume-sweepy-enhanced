@@ -151,7 +151,8 @@ class RacePlanner:
         if not valid_wanted:
             chara = data.get("chara_info") or {}
             fans = int(chara.get("fans") or 0)
-            if fans < 350 and turn > 11:
+            JUNIOR_DEAD_ZONE = {12, 13, 14, 15}
+            if fans < 350 and turn > 11 and turn not in JUNIOR_DEAD_ZONE:
                 for pid in available:
                     if (turn, pid) not in self.rejected and self.check_aptitude(chara, pid):
                         return pid

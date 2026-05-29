@@ -44,5 +44,8 @@
   "train_min_total_stat_gain": 40,
   "reserve_master_hammer_final3": 3,
   "reserve_megaphone_summer": 2,
+  "max_consecutive_races": 3,
+  "bbq_unmaxxed_cards": 1,
+  "absolute_stat_cap": 1100,
   "imported_trainer_name": "UG template (End Closer / style 4) - see data/uma_guides/UG_STRATEGY.md"
 }

@@ -377,8 +377,10 @@ const els = {
         applyTheme(localStorage.getItem('theme'));
         const savedUsername = localStorage.getItem('saved_username');
         const savedPassword = localStorage.getItem('saved_password');
+        const savedProxyUrl = localStorage.getItem('saved_proxy_url');
         if (savedUsername) document.getElementById('username').value = savedUsername;
         if (savedPassword) document.getElementById('password').value = savedPassword;
+        if (savedProxyUrl && document.getElementById('proxy-url')) document.getElementById('proxy-url').value = savedProxyUrl;
         let themeToggleClicks = 0;
         els.themeToggle.addEventListener('click', () => {
             const nextTheme = document.body.classList.contains('theme-blue') ? 'pink' : 'blue';
@@ -595,7 +597,8 @@ const els = {
             return {
                 username: document.getElementById('username').value,
                 password: document.getElementById('password').value,
-                code: document.getElementById('code').value
+                code: document.getElementById('code').value,
+                proxy_url: document.getElementById('proxy-url') ? document.getElementById('proxy-url').value.trim() : ""
             };
         }
         function resetSelection() {
@@ -629,6 +632,18 @@ const els = {
                 } else if (data.success) {
                     localStorage.setItem('saved_username', payload.username);
                     localStorage.setItem('saved_password', payload.password);
+                    localStorage.setItem('saved_proxy_url', payload.proxy_url);
+                    try {
+                        await apiJson('/api/session-cache', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                steam_username: payload.username,
+                                steam_password: payload.password,
+                                proxy_url: payload.proxy_url
+                            })
+                        });
+                    } catch (ex) {}
                     await renderDashboard(data, { animateIntro: true, waitForIntro: true });
                     state.isLoading = false;
                 } else {
@@ -3909,6 +3924,18 @@ const els = {
                 const data = await apiJson('/api/session-cache');
                 if (data && data.success) {
                     state.lastSessionCache = data.cache || {};
+                    if (state.lastSessionCache.steam_username) {
+                        const uInput = document.getElementById('username');
+                        if (uInput) uInput.value = state.lastSessionCache.steam_username;
+                    }
+                    if (state.lastSessionCache.steam_password) {
+                        const pInput = document.getElementById('password');
+                        if (pInput) pInput.value = state.lastSessionCache.steam_password;
+                    }
+                    if (state.lastSessionCache.proxy_url) {
+                        const prxyInput = document.getElementById('proxy-url');
+                        if (prxyInput) prxyInput.value = state.lastSessionCache.proxy_url;
+                    }
                 }
             } catch (e) {}
             return state.lastSessionCache || {};

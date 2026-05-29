@@ -161,19 +161,19 @@ TRAINING_ITEM_DECK_TYPE_INDEX = {
 }
 
 DEFAULT_ITEM_TIERS = {
-    "speed_notepad": 1,
+    "speed_notepad": 999,
     "speed_manual": 1,
     "speed_scroll": 1,
-    "stamina_notepad": 1,
+    "stamina_notepad": 999,
     "stamina_manual": 1,
     "stamina_scroll": 1,
-    "power_notepad": 1,
+    "power_notepad": 999,
     "power_manual": 1,
     "power_scroll": 1,
-    "guts_notepad": 1,
+    "guts_notepad": 999,
     "guts_manual": 1,
     "guts_scroll": 1,
-    "wit_notepad": 1,
+    "wit_notepad": 999,
     "wit_manual": 1,
     "wit_scroll": 1,
     "vita_20": 3,
@@ -181,10 +181,10 @@ DEFAULT_ITEM_TIERS = {
     "vita_65": 2,
     "royal_kale_juice": 3,
     "energy_drink_max": 6,
-    "energy_drink_max_ex": 7,
+    "energy_drink_max_ex": 999,
     "plain_cupcake": 3,
     "berry_sweet_cupcake": 4,
-    "yummy_cat_food": 7,
+    "yummy_cat_food": 999,
     "grilled_carrots": 4,
     "pretty_mirror": 7,
     "reporters_binoculars": 8,
@@ -418,7 +418,7 @@ class MantItemManager:
         charm_stop = charm_owned >= charm_stop_qty
         cupcake_names = {"Plain Cupcake", "Berry Sweet Cupcake"}
         total_cupcakes = sum(owned.get(n, 0) for n in cupcake_names)
-        skip_cupcakes = total_cupcakes >= 2 or (is_senior_or_later and total_cupcakes >= 1) or motivation >= 5
+        skip_cupcakes = total_cupcakes >= 2 or (is_senior_or_later and total_cupcakes >= 1) or (motivation >= 5 and total_cupcakes >= 1)
         cupcake_shift = total_cupcakes - 1 if skip_cupcakes else 0
         active_ailments = self._active_bad_statuses(data)
         has_miracle = owned.get("Miracle Cure", 0) > 0
@@ -799,7 +799,7 @@ class MantItemManager:
 
                 targets.append((name, qty))
 
-        targets.extend(self._energy_targets(chara, owned, preset))
+        targets.extend(self._energy_targets(chara, owned, preset, best_command))
         targets.extend(self._ailment_cure_targets(data, owned))
         mood_target = self._mood_target(chara, owned)
         if mood_target:
@@ -1051,17 +1051,29 @@ class MantItemManager:
             result.append((AILMENT_CURE_ALL, 1))
         return result
 
-    def _energy_targets(self, chara, owned, preset):
+    def _energy_targets(self, chara, owned, preset, best_command=None):
         result = []
         hp = int(chara.get("vital") or 0)
         max_hp = int(chara.get("max_vital") or 100)
         gap = max_hp - hp
         if gap < 20:
             return result
+
+        needed_recovery_for_failure = 0
+        if best_command and int(best_command.get("command_type") or 0) == 1:
+            fail_rate = int(best_command.get("failure_rate") or 0)
+            if fail_rate > 20:
+                needed_recovery_for_failure = fail_rate - 20
+
         cfg = self._mant_cfg(preset)
         threshold = int(cfg.get("energy_recovery_threshold") or 45)
-        if hp > threshold:
+        if hp > threshold and needed_recovery_for_failure <= 0:
             return result
+
+        if hp <= threshold:
+            target_recovery = gap
+        else:
+            target_recovery = min(gap, needed_recovery_for_failure)
 
         candidates = []
         for name, value in ENERGY_ITEMS.items():
@@ -1071,7 +1083,7 @@ class MantItemManager:
 
         candidates.sort(key=lambda x: (x["name"] == "Royal Kale Juice", -x["value"]))
 
-        remaining_gap = gap
+        remaining_gap = target_recovery
         for c in candidates:
             if remaining_gap <= 5: break
             num_to_use = min(c["qty"], (remaining_gap + 5) // c["value"])
@@ -1111,6 +1123,9 @@ class MantItemManager:
         return None
 
     def _charm_target(self, best_command, owned, preset, status):
+        if self.current_turn is not None and self.current_turn > 49:
+            if not (60 <= self.current_turn <= 64):
+                return None
         if owned.get("Good-Luck Charm", 0) <= 0:
             return None
         if not best_command or int(best_command.get("command_type") or 0) != 1:

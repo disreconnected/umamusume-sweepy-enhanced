@@ -230,12 +230,15 @@ if support_path.exists():
 
 SESSION_CACHE_PATH = base_dir / 'data' / '.session_cache.json'
 LOCAL_DECKS_PATH = base_dir / 'data' / 'decks.json'
-SESSION_CACHE_WRITABLE_KEYS = ('selected_preset',)
+SESSION_CACHE_WRITABLE_KEYS = ('selected_preset', 'steam_username', 'steam_password', 'proxy_url')
 SESSION_CACHE_ALL_KEYS = (
     'viewer_id',
     'career',
     'selected_preset',
     'last_login_at',
+    'steam_username',
+    'steam_password',
+    'proxy_url',
 )
 
 
@@ -1097,6 +1100,7 @@ class LoginRequest(BaseModel):
     code: str = ""
     steam_id: str = ""
     steam_session_ticket: str = ""
+    proxy_url: str = ""
 
 class DeleteCareerRequest(BaseModel):
     current_turn: int = 0
@@ -1683,12 +1687,15 @@ async def login(req: LoginRequest):
         }
 
         has_form_creds = bool(req.username and req.password)
+        cache = _load_session_cache()
+        proxy_url = req.proxy_url or cache.get('proxy_url', '')
+
         if req.steam_id and req.steam_session_ticket:
             sid = str(req.steam_id)
             tkt = str(req.steam_session_ticket)
             print('Using provided Steam ticket')
         elif has_form_creds:
-            sid, tkt = get_ticket(req.username, req.password, req.code)
+            sid, tkt = get_ticket(req.username, req.password, req.code, proxy_url)
         else:
             raise Exception('Steam credentials required')
 
@@ -1698,8 +1705,15 @@ async def login(req: LoginRequest):
                 'steam_session_ticket': tkt,
             })
         cfg['steam_password_seed'] = req.password
+        cfg['proxy_url'] = proxy_url
         if not has_fresh_auth_config(cfg):
             raise Exception('Fresh in-game auth capture required; switch to the target in-game account, restart capture, then login again')
+
+        target_username = req.username or cache.get('steam_username')
+        print(f"Using Frida-captured viewer_id: {cfg.get('viewer_id')}")
+
+        cfg['steam_username'] = target_username
+        cfg['steam_password'] = req.password or cache.get('steam_password')
 
         c = UmaClient(cfg, trace_enabled=False)
         gated_client = GateKeeper(c)
@@ -1872,6 +1886,7 @@ async def login(req: LoginRequest):
             "viewer_id": int(getattr(active_client, "viewer_id", 0) or 0),
             "career": _career_snapshot_for_cache(account),
             "last_login_at": datetime.now(timezone.utc).isoformat(),
+            "proxy_url": proxy_url,
         })
         return active_dashboard_data
     except Exception as e:
@@ -1906,6 +1921,9 @@ async def update_selection(req: UISelectionRequest):
 
 class SessionCacheUpdateRequest(BaseModel):
     selected_preset: str | None = None
+    steam_username: str | None = None
+    steam_password: str | None = None
+    proxy_url: str | None = None
 
 
 @app.get("/api/session-cache")
@@ -1924,6 +1942,12 @@ async def update_session_cache(req: SessionCacheUpdateRequest):
     updates = {}
     if req.selected_preset is not None:
         updates["selected_preset"] = req.selected_preset
+    if req.steam_username is not None:
+        updates["steam_username"] = req.steam_username
+    if req.steam_password is not None:
+        updates["steam_password"] = req.steam_password
+    if req.proxy_url is not None:
+        updates["proxy_url"] = req.proxy_url
     cache = _save_session_cache(updates) if updates else _load_session_cache()
     return {"success": True, "cache": cache}
 
