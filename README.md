@@ -175,11 +175,33 @@ curl_cffi==0.7.4
   `skill_data.json`, `support_list.json`). The bot writes
   `data/.session_cache.json` and `data/decks.json`; both are gitignored.
 
-### Running
-1. `npm i`
-2. `pip install -r requirements.txt`
+### How to Setup and Run
+
+#### 1. Prepare Frida Server
+You must download and place the Frida server executable matching the version in `requirements.txt` (`frida==17.9.1`) into the repository root.
+- Download `frida-server-17.9.1-windows-x86_64.exe.xz` (or similar 17.9.x version) from the [Frida Releases](https://github.com/frida/frida/releases).
+- Extract it and place the `.exe` file directly in the project root directory.
+
+#### 2. Directory Structure
+Ensure your project folder tree matches the following:
+```text
+umamusume-sweepy-enhanced/
+├── career_bot/
+├── data/
+├── node_modules/
+├── public/
+├── uma_api/
+├── main.py
+├── frida-server-17.9.1-windows-x86_64.exe  <-- Place the frida server exe here
+├── requirements.txt
+└── ...
+```
+
+#### 3. Running
+1. Run `npm i` to install Node dependencies.
+2. Run `pip install -r requirements.txt` to install Python dependencies.
 3. Launch the DMM/Steam game client.
-4. `python main.py` — dashboard at `http://127.0.0.1:1616`.
+4. Run `python main.py` — access the dashboard Web UI at: `http://127.0.0.1:1616`.
 
 ---
 
