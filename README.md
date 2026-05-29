@@ -13,13 +13,13 @@ heavily expanded web UI.
 
 ## What's new in this fork
 
-### 1. UG (Ultimate-G) targeting
+### 1. UG (Ultimate-G) targeting ( lmao not even close for the current version, need to revise the bot strategy )
 
-- New canonical strategy doc at [`data/uma_guides/UG_STRATEGY.md`](data/uma_guides/UG_STRATEGY.md),
+- New canonical strategy doc at [`data/uma_guides/UG_STRATEGY.md`](data/uma_guides/UG_STRATEGY.md) ,
   synthesised from public English UG guides. Documents the rank ladder
   (UG = rank id `19`, US+ = `34`), the five `rank_score` pillars
   (stats, skills, race wins, set bonuses, aptitudes), and the cadences
-  the bot now follows.
+  the bot now follows. (will be updated soon)
 - New UG preset fields in `career_bot/presets.py`:
   - `target_rank` (default `RANK_ID_UG = 19`)
   - `race_count_target = 36`, `min_races = 30`, `max_races = 40`
@@ -114,14 +114,14 @@ heavily expanded web UI.
   into a re-usable Sweepy deck. This does **not** touch in-game deck
   slots; friend support is still selected separately.
 
-### 6. Auto-skill-buy temporarily disabled
+### 6. Auto-skill-buy temporarily disabled ( maybe will implement a UI for buying skills similar to the game version, not a priority )
 
 All three skill auto-buy call sites in `career_bot/runner.py` are
 commented out with the marker `# UG-AUTO-SKILL-BUY DISABLED`. The
 underlying `_buy_skills(...)` helper is kept so re-enabling is a
 3-line uncomment once selection logic is tightened.
 
-### 7. New strategy / handoff docs
+### 7. New strategy / handoff docs ( will be updated ) 
 
 - [`data/uma_guides/UG_STRATEGY.md`](data/uma_guides/UG_STRATEGY.md) —
   canonical UG rating strategy.
@@ -200,8 +200,8 @@ umamusume-sweepy-enhanced/
 #### 3. Running
 1. Run `npm i` to install Node dependencies.
 2. Run `pip install -r requirements.txt` to install Python dependencies.
-3. Launch the DMM/Steam game client.
-4. Run `python main.py` — access the dashboard Web UI at: `http://127.0.0.1:1616`.
+3. Run `python main.py` — access the dashboard Web UI at: `http://127.0.0.1:1616`.
+4. Login & 2FA.
 
 ---
 
