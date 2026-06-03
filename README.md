@@ -1,25 +1,28 @@
 # umamusume-sweepy-enhanced
 
 > Enhanced fork of [SweepTosher/umamusume-sweepy](https://github.com/SweepTosher/umamusume-sweepy)
-> focused on grinding **UG-rated** Trailblazer ("mant") careers for blue-factor
+> focused on grinding stable **S-Rank minimum / stable high stats** Trailblazer ("mant") careers for blue-factor
 > parents, with a much richer dashboard for deck/parent management.
 
 The original upstream is a `/vg/` Sweepy bot that drives Uma Musume Pretty
 Derby careers via a Frida hook + msgpack/protobuf intercept. This fork keeps
-that engine intact and layers on a UG-focused decision/preset stack plus a
+that engine intact and layers on a calibrated decision/preset stack plus a
 heavily expanded web UI.
 
 ---
 
 ## What's new in this fork
 
-### 1. UG (Ultimate-G) targeting ( lmao not even close for the current version, need to revise the bot strategy )
+### 1. High-Stat & S-Rank Targeting (UG is current aspirational ceiling)
 
-- New canonical strategy doc at [`data/uma_guides/UG_STRATEGY.md`](data/uma_guides/UG_STRATEGY.md) ,
-  synthesised from public English UG guides. Documents the rank ladder
+> [!NOTE]
+> **Realistic Calibration Target**: While the presets and strategy support pushing towards the Ultimate (UG) tier, achieving UG reliably is far-fetched for the current version without maxed setups. The realistic, stable focus is calibrated for **S-Rank minimum** and high stats to build solid parent grids.
+
+- Strategy framework at [`data/uma_guides/UG_STRATEGY.md`](data/uma_guides/UG_STRATEGY.md),
+  synthesised from public English guides. Documents the rank ladder
   (UG = rank id `19`, US+ = `34`), the five `rank_score` pillars
   (stats, skills, race wins, set bonuses, aptitudes), and the cadences
-  the bot now follows. (will be updated soon)
+  the bot now follows.
 - New UG preset fields in `career_bot/presets.py`:
   - `target_rank` (default `RANK_ID_UG = 19`)
   - `race_count_target = 36`, `min_races = 30`, `max_races = 40`
@@ -124,7 +127,7 @@ underlying `_buy_skills(...)` helper is kept so re-enabling is a
 ### 7. New strategy / handoff docs ( will be updated ) 
 
 - [`data/uma_guides/UG_STRATEGY.md`](data/uma_guides/UG_STRATEGY.md) —
-  canonical UG rating strategy.
+  calibration strategy framework for high stats and S-Rank targeting.
 - [`context.md`](context.md) — full session handoff context covering
   repo layout, current bug state, and pending work.
 - [`scripts/transcribe_uma_guide.py`](scripts/transcribe_uma_guide.py) —
