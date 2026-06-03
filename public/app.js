@@ -29,7 +29,33 @@ const state = {
     deckEditor: { open: false, id: "", name: "", cards: [], inspectCard: null },
     eventBoost: { enabled: false, story_event_id: 0, tp_multiplier: 2 },
     isManagingFollow: false,
-    advisorRecommendations: []
+    advisorRecommendations: [],
+    filters: {
+        decks: { query: '' },
+        trainees: { query: '' },
+        friends: {
+            query: '',
+            type: 'all',
+            rarity: { SSR: true, SR: true, R: true },
+            limitBreak: 'all'
+        },
+        ownedCards: {
+            query: '',
+            type: 'all',
+            rarity: { SSR: true, SR: true, R: true }
+        },
+        parents: {
+            query: '',
+            rank: 'all',
+            criteria: []
+        },
+        friendVets: {
+            query: '',
+            rank: 'all',
+            criteria: []
+        }
+    },
+    uniqueFactors: []
 };
 const els = {
     loadingScreen: document.getElementById('loading-screen'),
@@ -59,6 +85,28 @@ const els = {
     friendVetGrid: document.getElementById('friend-vet-grid'),
     friendVetCount: document.getElementById('friend-vet-count'),
     friendVetStatus: document.getElementById('friend-vet-status'),
+
+    // Library Filters Cache
+    deckSearch: document.getElementById('deck-search-input'),
+    traineeSearch: document.getElementById('trainee-search-input'),
+    
+    friendSearch: document.getElementById('friend-search-input'),
+    friendType: document.getElementById('friend-type-select'),
+    friendRarityRow: document.getElementById('friend-rarity-row'),
+    
+    parentSearch: document.getElementById('parent-search-input'),
+    parentRank: document.getElementById('parent-rank-select'),
+    parentSparkToggle: document.getElementById('parent-spark-toggle'),
+    parentSparkDrawer: document.getElementById('parent-spark-drawer'),
+    
+    friendVetSearch: document.getElementById('friend-vet-search-input'),
+    friendVetRank: document.getElementById('friend-vet-rank-select'),
+    friendVetSparkToggle: document.getElementById('friend-vet-spark-toggle'),
+    friendVetSparkDrawer: document.getElementById('friend-vet-spark-drawer'),
+    
+    cardSearch: document.getElementById('card-search-input'),
+    cardType: document.getElementById('card-type-select'),
+    cardRarityRow: document.getElementById('card-rarity-row'),
     friendVetRefreshBtn: document.getElementById('friend-vet-refresh-btn'),
     friendVetsToggle: document.getElementById('friend-vets-toggle'),
     friendVetsChevron: document.getElementById('friend-vets-chevron'),
@@ -1409,7 +1457,26 @@ const els = {
         }
         function getVisibleFriends() {
             const friends = (dashData && dashData.friends) || [];
-            return friends.filter(friendAllowed);
+            const allowed = friends.filter(friendAllowed);
+            
+            const query = (state.filters.friends.query || '').toLowerCase().trim();
+            const type = state.filters.friends.type;
+            const lb = state.filters.friends.limitBreak;
+            
+            return allowed.filter(friend => {
+                if (query) {
+                    const cName = String(friend.support_name || '').toLowerCase();
+                    const tName = String(friend.trainer_name || '').toLowerCase();
+                    const fId = String(friend.viewer_id || '').toLowerCase();
+                    if (!cName.includes(query) && !tName.includes(query) && !fId.includes(query)) return false;
+                }
+                if (type !== 'all' && friend.type !== type) return false;
+                if (!state.filters.friends.rarity[friend.rarity]) return false;
+                if (lb !== 'all') {
+                    if (lb === '4' && Number(friend.limit_break_count || 0) < 4) return false;
+                }
+                return true;
+            });
         }
         function clearInvalidFriendSelection() {
             if (selection.friend && !friendAllowed(selection.friend)) {
@@ -2907,9 +2974,43 @@ const els = {
         }
         function renderFriendVeterans() {
             if (!els.friendVetGrid) return;
+            scanUniqueFactors();
             const vets = (dashData && dashData.friendVeterans) || [];
-            if (els.friendVetCount) els.friendVetCount.innerText = `(${vets.length})`;
-            els.friendVetGrid.innerHTML = vets.map(v => {
+            
+            const query = (state.filters.friendVets.query || '').toLowerCase().trim();
+            const minRank = state.filters.friendVets.rank;
+            const criteria = state.filters.friendVets.criteria;
+            
+            const filteredVets = vets.filter(v => {
+                if (query) {
+                    const cName = String(v.chara_name || '').toLowerCase();
+                    const tName = String(v.trainer_name || '').toLowerCase();
+                    if (!cName.includes(query) && !tName.includes(query)) return false;
+                }
+                if (minRank !== 'all') {
+                    const rankVal = Number(v.rank || 0);
+                    if (minRank === 'UG' && rankVal < 19) return false;
+                    if (minRank === 'SS' && rankVal < 18) return false;
+                    if (minRank === 'S' && rankVal < 17) return false;
+                    if (minRank === 'A+' && rankVal < 16) return false;
+                }
+                for (const criterion of criteria) {
+                    if (!criterion.name) continue;
+                    let totalStars = 0;
+                    if (v.factors) {
+                        v.factors.forEach(f => {
+                            if (f && f.name === criterion.name) {
+                                totalStars += Number(f.stars || 0);
+                            }
+                        });
+                    }
+                    if (totalStars < criterion.minStars) return false;
+                }
+                return true;
+            });
+            
+            if (els.friendVetCount) els.friendVetCount.innerText = `(${filteredVets.length}/${vets.length})`;
+            els.friendVetGrid.innerHTML = filteredVets.map(v => {
                 const imgId = v.card_id || 100101;
                 const rank = rankLabel(v.rank);
                 const tier = rankTier(v.rank);
@@ -2936,7 +3037,7 @@ const els = {
                     </div>
                 </div>`;
             }).join('');
-            attachFriendVeteranHandlers();
+            attachFriendVeteranHandlers(filteredVets);
             syncFriendVeteranSelection();
             renderTeamPanel();
             updateAdvisorRecommendations();
@@ -2948,8 +3049,8 @@ const els = {
                 el.classList.toggle('selected', el.dataset.vetKey === key);
             });
         }
-        function attachFriendVeteranHandlers() {
-            const vets = (dashData && dashData.friendVeterans) || [];
+        function attachFriendVeteranHandlers(filteredVets) {
+            const vets = filteredVets || (dashData && dashData.friendVeterans) || [];
             document.querySelectorAll('#friend-vet-grid .grid-card').forEach((el, i) => {
                 el.classList.add('selectable');
                 el.addEventListener('click', () => {
@@ -3432,7 +3533,9 @@ const els = {
             updateAdvisorRecommendations();
         }
         function attachDeckHandlers() {
-            document.querySelectorAll('.deck-container').forEach((element, index) => {
+            document.querySelectorAll('.deck-container').forEach((element) => {
+                const index = Number(element.dataset.originalIndex);
+                if (isNaN(index) || index < 0) return;
                 element.addEventListener('click', () => selectDeck(index, element));
             });
             document.querySelectorAll('.deck-edit-btn').forEach(btn => {
@@ -3445,16 +3548,28 @@ const els = {
             });
         }
 
-        function attachSelectionHandlers() {
-            attachDeckHandlers();
-            document.querySelectorAll('#uma-grid .grid-card').forEach((element, index) => {
+        function attachTraineeHandlers() {
+            document.querySelectorAll('#uma-grid .grid-card').forEach((element) => {
+                const index = Number(element.dataset.originalIndex);
+                if (isNaN(index) || index < 0) return;
                 element.classList.add('selectable');
                 element.addEventListener('click', () => selectTrainee(index, element));
             });
-            document.querySelectorAll('#parent-grid .grid-card').forEach((element, index) => {
+        }
+
+        function attachParentHandlers() {
+            document.querySelectorAll('#parent-grid .grid-card').forEach((element) => {
+                const index = Number(element.dataset.originalIndex);
+                if (isNaN(index) || index < 0) return;
                 element.classList.add('selectable');
                 element.addEventListener('click', () => selectParent(index, element));
             });
+        }
+
+        function attachSelectionHandlers() {
+            attachDeckHandlers();
+            attachTraineeHandlers();
+            attachParentHandlers();
         }
         function isValidDeck(deck) {
             return deck.cards.every(card => {
@@ -3464,12 +3579,17 @@ const els = {
             });
         }
         function renderCounts(data) {
-            els.umaCount.innerText = `(${data.umas.length})`;
-            els.cardCount.innerText = `(${data.supports.length})`;
-            els.parentCount.innerText = `(${data.parents.length})`;
+            // Handled dynamically per-render to support filtered states
         }
         function renderDecks(decks) {
-            els.deckList.innerHTML = decks.map(deck => {
+            const query = (state.filters.decks.query || '').toLowerCase().trim();
+            const filteredDecks = decks.filter(deck => {
+                if (!query) return true;
+                return String(deck.name || '').toLowerCase().includes(query);
+            });
+
+            els.deckList.innerHTML = filteredDecks.map(deck => {
+                const originalIdx = (dashData.validDecks || []).indexOf(deck);
                 const cards = deck.cards.map(card => {
                     const imgId = card.id || '10001';
                     return `<div class="grid-card deck-card">
@@ -3481,7 +3601,7 @@ const els = {
                     </div>`;
                 }).join('');
                 const localActions = deck.local ? `<button class="btn btn-sm deck-edit-btn" type="button" data-deck-id="${escapeAttr(deck.id)}">EDIT</button>` : '';
-                return `<div class="deck-container">
+                return `<div class="deck-container" data-original-index="${originalIdx}">
                     <div class="deck-header">
                         <span>${escapeHtml(deck.name || 'Deck').toUpperCase()} ${deck.local ? '<span class="deck-local-badge">LOCAL</span>' : ''}</span>
                         <span style="font-size:0.85rem; opacity:0.8">${deck.local ? 'SWEEPY' : `SLOT ${deck.id}`} ${localActions}</span>
@@ -3489,6 +3609,7 @@ const els = {
                     <div class="deck-cards">${cards}</div>
                 </div>`;
             }).join('');
+            attachDeckHandlers();
         }
 
         function supportById(id) {
@@ -3671,12 +3792,315 @@ const els = {
                 <img src="/api/images/${cardId}.png" onerror="hideBrokenImage(this)">
             </div>`;
         }
+        const invCategoryMap = {
+            blue: 'stat',
+            pink: 'aptitude',
+            green: 'unique',
+            white: 'skill'
+        };
+
+        function scanUniqueFactors() {
+            const factorSet = new Set();
+            if (dashData && dashData.parents) {
+                dashData.parents.forEach(parent => {
+                    const tree = parent.tree || {};
+                    ['self', 'p1', 'p2'].forEach(key => {
+                        const node = tree[key];
+                        if (node && node.factors) {
+                            node.factors.forEach(f => {
+                                if (f && f.name) {
+                                    factorSet.add(JSON.stringify({ name: f.name, category: f.category }));
+                                }
+                            });
+                        }
+                    });
+                });
+            }
+            if (dashData && dashData.friendVeterans) {
+                dashData.friendVeterans.forEach(v => {
+                    if (v && v.factors) {
+                        v.factors.forEach(f => {
+                            if (f && f.name) {
+                                factorSet.add(JSON.stringify({ name: f.name, category: f.category }));
+                            }
+                        });
+                    }
+                });
+            }
+            state.uniqueFactors = Array.from(factorSet).map(str => JSON.parse(str)).sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        function getFactorsByCategory(categoryName) {
+            const dbCategory = invCategoryMap[categoryName];
+            if (!dbCategory) return [];
+            return state.uniqueFactors.filter(f => f.category === dbCategory);
+        }
+
+        function renderSparkCriterionRow(categoryName, criterion, index, type) {
+            const factors = getFactorsByCategory(categoryName);
+            const optionsHtml = factors.map(f => {
+                const selected = f.name === criterion.name ? 'selected' : '';
+                return `<option value="${escapeAttr(f.name)}" ${selected}>${escapeHtml(f.name)}</option>`;
+            }).join('');
+
+            return `<div class="spark-criterion-row" data-category="${categoryName}" data-index="${index}" data-type="${type}">
+                <select class="spark-criterion-select">
+                    <option value="">-- Select Factor --</option>
+                    ${optionsHtml}
+                </select>
+                <select class="spark-criterion-stars">
+                    ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(stars => {
+                        const selected = stars === Number(criterion.minStars) ? 'selected' : '';
+                        return `<option value="${stars}" ${selected}>${stars}★</option>`;
+                    }).join('')}
+                </select>
+                <button class="spark-criterion-remove" type="button" title="Remove factor">&times;</button>
+            </div>`;
+        }
+
+        function renderSparkCriteria(type) {
+            const prefix = type === 'parents' ? 'parent' : 'friend-vet';
+            const categories = ['blue', 'pink', 'green', 'white'];
+            
+            categories.forEach(cat => {
+                const listEl = document.getElementById(`${prefix}-${cat}-criteria`);
+                if (listEl) listEl.innerHTML = '';
+            });
+
+            const criteria = state.filters[type].criteria;
+            criteria.forEach((criterion, idx) => {
+                const cat = criterion.category;
+                const listEl = document.getElementById(`${prefix}-${cat}-criteria`);
+                if (listEl) {
+                    listEl.insertAdjacentHTML('beforeend', renderSparkCriterionRow(cat, criterion, idx, type));
+                }
+            });
+
+            const containerId = type === 'parents' ? 'parent-spark-drawer' : 'friend-vet-spark-drawer';
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.querySelectorAll('.spark-criterion-select').forEach(sel => {
+                sel.addEventListener('change', (e) => {
+                    const row = e.target.closest('.spark-criterion-row');
+                    const idx = Number(row.dataset.index);
+                    const val = e.target.value;
+                    state.filters[type].criteria[idx].name = val;
+                    triggerFilterReRender(type);
+                });
+            });
+
+            container.querySelectorAll('.spark-criterion-stars').forEach(sel => {
+                sel.addEventListener('change', (e) => {
+                    const row = e.target.closest('.spark-criterion-row');
+                    const idx = Number(row.dataset.index);
+                    const val = Number(e.target.value);
+                    state.filters[type].criteria[idx].minStars = val;
+                    triggerFilterReRender(type);
+                });
+            });
+
+            container.querySelectorAll('.spark-criterion-remove').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const row = e.target.closest('.spark-criterion-row');
+                    const idx = Number(row.dataset.index);
+                    state.filters[type].criteria.splice(idx, 1);
+                    renderSparkCriteria(type);
+                    triggerFilterReRender(type);
+                });
+            });
+        }
+
+        function triggerFilterReRender(type) {
+            if (type === 'parents') {
+                if (dashData && dashData.parents) renderParents(dashData.parents);
+            } else if (type === 'friendVets') {
+                if (dashData && dashData.friendVeterans) renderFriendVeterans();
+            }
+        }
+
+        function addSparkCriterion(type, categoryName) {
+            state.filters[type].criteria.push({
+                category: categoryName,
+                name: '',
+                minStars: 3
+            });
+            renderSparkCriteria(type);
+            triggerFilterReRender(type);
+        }
+
+        function bindLibraryFilters() {
+            if (els.deckSearch) {
+                els.deckSearch.addEventListener('input', () => {
+                    state.filters.decks.query = els.deckSearch.value;
+                    if (dashData && dashData.validDecks) renderDecks(dashData.validDecks);
+                });
+            }
+            if (els.traineeSearch) {
+                els.traineeSearch.addEventListener('input', () => {
+                    state.filters.trainees.query = els.traineeSearch.value;
+                    if (dashData && dashData.umas) renderTrainees(dashData.umas);
+                });
+            }
+            if (els.friendSearch) {
+                els.friendSearch.addEventListener('input', () => {
+                    state.filters.friends.query = els.friendSearch.value;
+                    renderFriends();
+                });
+            }
+            if (els.friendType) {
+                els.friendType.addEventListener('change', () => {
+                    state.filters.friends.type = els.friendType.value;
+                    renderFriends();
+                });
+            }
+            if (els.friendRarityRow) {
+                els.friendRarityRow.querySelectorAll('.filter-chip').forEach(chip => {
+                    chip.addEventListener('click', () => {
+                        const filterVal = chip.dataset.filter;
+                        if (filterVal === 'all' || filterVal === '4') {
+                            state.filters.friends.limitBreak = filterVal;
+                            els.friendRarityRow.querySelectorAll('.filter-chip').forEach(c => {
+                                const f = c.dataset.filter;
+                                if (f === 'all' || f === '4') {
+                                    c.classList.toggle('active', f === filterVal);
+                                }
+                            });
+                        } else {
+                            state.filters.friends.rarity[filterVal] = !state.filters.friends.rarity[filterVal];
+                            chip.classList.toggle('active', state.filters.friends.rarity[filterVal]);
+                        }
+                        renderFriends();
+                    });
+                });
+            }
+            if (els.cardSearch) {
+                els.cardSearch.addEventListener('input', () => {
+                    state.filters.ownedCards.query = els.cardSearch.value;
+                    if (dashData && dashData.supports) renderSupports(dashData.supports);
+                });
+            }
+            if (els.cardType) {
+                els.cardType.addEventListener('change', () => {
+                    state.filters.ownedCards.type = els.cardType.value;
+                    if (dashData && dashData.supports) renderSupports(dashData.supports);
+                });
+            }
+            if (els.cardRarityRow) {
+                els.cardRarityRow.querySelectorAll('.filter-chip').forEach(chip => {
+                    chip.addEventListener('click', () => {
+                        const filterVal = chip.dataset.filter;
+                        state.filters.ownedCards.rarity[filterVal] = !state.filters.ownedCards.rarity[filterVal];
+                        chip.classList.toggle('active', state.filters.ownedCards.rarity[filterVal]);
+                        if (dashData && dashData.supports) renderSupports(dashData.supports);
+                    });
+                });
+            }
+            if (els.parentSearch) {
+                els.parentSearch.addEventListener('input', () => {
+                    state.filters.parents.query = els.parentSearch.value;
+                    if (dashData && dashData.parents) renderParents(dashData.parents);
+                });
+            }
+            if (els.parentRank) {
+                els.parentRank.addEventListener('change', () => {
+                    state.filters.parents.rank = els.parentRank.value;
+                    if (dashData && dashData.parents) renderParents(dashData.parents);
+                });
+            }
+            if (els.parentSparkToggle && els.parentSparkDrawer) {
+                els.parentSparkToggle.addEventListener('click', () => {
+                    const isHidden = els.parentSparkDrawer.style.display === 'none';
+                    els.parentSparkDrawer.style.display = isHidden ? 'flex' : 'none';
+                    const chevron = els.parentSparkToggle.querySelector('.spark-toggle-chevron');
+                    if (chevron) chevron.classList.toggle('expanded', isHidden);
+                });
+            }
+            if (els.parentSparkDrawer) {
+                els.parentSparkDrawer.querySelectorAll('.add-spark-criterion-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const cat = btn.dataset.category;
+                        addSparkCriterion('parents', cat);
+                    });
+                });
+            }
+            if (els.friendVetSearch) {
+                els.friendVetSearch.addEventListener('input', () => {
+                    state.filters.friendVets.query = els.friendVetSearch.value;
+                    renderFriendVeterans();
+                });
+            }
+            if (els.friendVetRank) {
+                els.friendVetRank.addEventListener('change', () => {
+                    state.filters.friendVets.rank = els.friendVetRank.value;
+                    renderFriendVeterans();
+                });
+            }
+            if (els.friendVetSparkToggle && els.friendVetSparkDrawer) {
+                els.friendVetSparkToggle.addEventListener('click', () => {
+                    const isHidden = els.friendVetSparkDrawer.style.display === 'none';
+                    els.friendVetSparkDrawer.style.display = isHidden ? 'flex' : 'none';
+                    const chevron = els.friendVetSparkToggle.querySelector('.spark-toggle-chevron');
+                    if (chevron) chevron.classList.toggle('expanded', isHidden);
+                });
+            }
+            if (els.friendVetSparkDrawer) {
+                els.friendVetSparkDrawer.querySelectorAll('.add-spark-criterion-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const cat = btn.dataset.category;
+                        addSparkCriterion('friendVets', cat);
+                    });
+                });
+            }
+
+            renderSparkCriteria('parents');
+            renderSparkCriteria('friendVets');
+        }
+
         function renderParents(parents) {
-            els.parentGrid.innerHTML = parents.map(parent => {
+            scanUniqueFactors();
+            const query = (state.filters.parents.query || '').toLowerCase().trim();
+            const minRank = state.filters.parents.rank;
+            const criteria = state.filters.parents.criteria;
+            
+            const filteredParents = parents.filter(parent => {
+                if (query) {
+                    const cName = String(parent.name || '').toLowerCase();
+                    if (!cName.includes(query)) return false;
+                }
+                if (minRank !== 'all') {
+                    const rankVal = Number(parent.rank || 0);
+                    if (minRank === 'UG' && rankVal < 19) return false;
+                    if (minRank === 'SS' && rankVal < 18) return false;
+                    if (minRank === 'S' && rankVal < 17) return false;
+                    if (minRank === 'A+' && rankVal < 16) return false;
+                }
+                for (const criterion of criteria) {
+                    if (!criterion.name) continue;
+                    let totalStars = 0;
+                    const tree = parent.tree || {};
+                    ['self', 'p1', 'p2'].forEach(key => {
+                        const node = tree[key];
+                        if (node && node.factors) {
+                            node.factors.forEach(f => {
+                                if (f && f.name === criterion.name) {
+                                    totalStars += Number(f.stars || 0);
+                                }
+                            });
+                        }
+                    });
+                    if (totalStars < criterion.minStars) return false;
+                }
+                return true;
+            });
+
+            els.parentCount.innerText = `(${filteredParents.length}/${parents.length})`;
+            els.parentGrid.innerHTML = filteredParents.map(parent => {
                 const tree = parent.tree || {};
                 const selfNode = tree.self || { card_id: parent.card_id, name: parent.name };
                 const imgId = (selfNode.card_id || parent.card_id) || '100101';
-                return `<div class="grid-card parent-card">
+                const originalIdx = (dashData.parents || []).indexOf(parent);
+                return `<div class="grid-card parent-card" data-original-index="${originalIdx}">
                     <div class="rank-badge">${rankMap[parent.rank] || '??'}</div>
                     <div class="parent-tree">
                         ${renderParentTreeNode(selfNode, 'self')}
@@ -3702,19 +4126,40 @@ const els = {
                     </div>
                 </div>`;
             }).join('');
+            attachParentHandlers();
+            bindSparkTooltips();
         }
         function renderTrainees(umas) {
-            els.umaGrid.innerHTML = umas.map(uma => {
+            const query = (state.filters.trainees.query || '').toLowerCase().trim();
+            const filteredUmas = umas.filter(uma => {
+                if (!query) return true;
+                return String(uma.name || '').toLowerCase().includes(query);
+            });
+
+            els.umaCount.innerText = `(${filteredUmas.length}/${umas.length})`;
+            els.umaGrid.innerHTML = filteredUmas.map(uma => {
                 const imgId = uma.id || '100101';
-                return `<div class="grid-card">
+                const originalIdx = (dashData.umas || []).indexOf(uma);
+                return `<div class="grid-card" data-original-index="${originalIdx}">
                     <img src="/api/images/${imgId}.png" onerror="hideBrokenImage(this)">
                     <div class="grid-card-overlay"><span class="grid-card-name">${uma.name || 'Unknown'}</span></div>
                 </div>`;
             }).join('');
+            attachTraineeHandlers();
         }
         function renderSupports(supports) {
+            const query = (state.filters.ownedCards.query || '').toLowerCase().trim();
+            const type = state.filters.ownedCards.type;
+            const filteredSupports = supports.filter(card => {
+                if (query && !String(card.name || '').toLowerCase().includes(query)) return false;
+                if (type !== 'all' && card.type !== type) return false;
+                if (!state.filters.ownedCards.rarity[card.rarity]) return false;
+                return true;
+            });
+
             const selected = new Set((state.deckEditor.cards || []).map(card => String(card.id)));
-            els.cardGrid.innerHTML = supports.map(card => {
+            els.cardCount.innerText = `(${filteredSupports.length}/${supports.length})`;
+            els.cardGrid.innerHTML = filteredSupports.map(card => {
                 const imgId = card.id || '10001';
                 const isSelected = selected.has(String(card.id));
                 return `<div class="grid-card support-card ${isSelected ? 'deck-pick-selected' : ''}" data-card-id="${escapeAttr(card.id)}">
@@ -3725,8 +4170,12 @@ const els = {
                     </div>
                 </div>`;
             }).join('');
-            document.querySelectorAll('#card-grid .support-card').forEach((element, index) => {
-                element.addEventListener('click', () => toggleDeckEditorCard(supports[index]));
+            document.querySelectorAll('#card-grid .support-card').forEach((element) => {
+                element.addEventListener('click', () => {
+                    const cardId = String(element.dataset.cardId);
+                    const cardObj = (dashData.supports || []).find(c => String(c.id) === cardId);
+                    if (cardObj) toggleDeckEditorCard(cardObj);
+                });
             });
         }
         function showDashboardView(data) {
@@ -3754,8 +4203,8 @@ const els = {
                 const umaIdx = dashData.umas.findIndex(u => String(u.id) === String(activeCareer.card_id));
                 if (umaIdx >= 0) {
                     selection.trainee = dashData.umas[umaIdx];
-                    const umaEls = document.querySelectorAll('#uma-grid .grid-card');
-                    if (umaEls[umaIdx]) umaEls[umaIdx].classList.add('selected');
+                    const umaEl = document.querySelector(`#uma-grid .grid-card[data-original-index="${umaIdx}"]`);
+                    if (umaEl) umaEl.classList.add('selected');
                 }
             }
 
@@ -3770,8 +4219,8 @@ const els = {
                             if (selection.veterans.length < 2 && !selection.veterans.find(v => Number(v.instance_id) === pId)) {
                                 p._gridIdx = idx;
                                 selection.veterans.push(p);
-                                const parentEls = document.querySelectorAll('#parent-grid .grid-card');
-                                if (parentEls[idx]) parentEls[idx].classList.add('selected');
+                                const parentEl = document.querySelector(`#parent-grid .grid-card[data-original-index="${idx}"]`);
+                                if (parentEl) parentEl.classList.add('selected');
                             }
                         }
                     });
@@ -3789,16 +4238,16 @@ const els = {
                 const deckIdx = dashData.validDecks.findIndex(d => Number(d.id) === Number(serverSelection.deck.id));
                 if (deckIdx >= 0) {
                     selection.deck = dashData.validDecks[deckIdx];
-                    const deckEls = document.querySelectorAll('.deck-container');
-                    if (deckEls[deckIdx]) deckEls[deckIdx].classList.add('selected');
+                    const deckEl = document.querySelector(`.deck-container[data-original-index="${deckIdx}"]`);
+                    if (deckEl) deckEl.classList.add('selected');
                 }
             }
             if (serverSelection.trainee && dashData.umas) {
                 const umaIdx = dashData.umas.findIndex(u => String(u.id) === String(serverSelection.trainee.id));
                 if (umaIdx >= 0) {
                     selection.trainee = dashData.umas[umaIdx];
-                    const umaEls = document.querySelectorAll('#uma-grid .grid-card');
-                    if (umaEls[umaIdx]) umaEls[umaIdx].classList.add('selected');
+                    const umaEl = document.querySelector(`#uma-grid .grid-card[data-original-index="${umaIdx}"]`);
+                    if (umaEl) umaEl.classList.add('selected');
                 }
             }
             if (serverSelection.veterans && dashData.parents) {
@@ -3808,8 +4257,8 @@ const els = {
                         const parent = dashData.parents[pIdx];
                         parent._gridIdx = pIdx;
                         selection.veterans.push(parent);
-                        const parentEls = document.querySelectorAll('#parent-grid .grid-card');
-                        if (parentEls[pIdx]) parentEls[pIdx].classList.add('selected');
+                        const parentEl = document.querySelector(`#parent-grid .grid-card[data-original-index="${pIdx}"]`);
+                        if (parentEl) parentEl.classList.add('selected');
                     }
                 });
                 updateVetSelectability();
@@ -3972,6 +4421,7 @@ const els = {
         }
         bindDelayControls();
         bindMasterDataControls();
+        bindLibraryFilters();
         setLoadingScreen(true);
         restoreSession();
 })();

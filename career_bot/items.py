@@ -475,7 +475,10 @@ class MantItemManager:
             if (slug == "miracle_cure" or slug == "rich_hand_cream") and owned.get(name, 0) <= 0:
                 eff_t = 1
             if slug == "grilled_carrots":
-                eff_t = min(eff_t, base_t - bbq_shift)
+                if non_rainbow_count == 0:
+                    eff_t = 999
+                else:
+                    eff_t = min(eff_t, base_t - bbq_shift)
             elif slug == "good-luck_charm":
                 eff_t = 999 if charm_stop else min(eff_t, base_t - charm_owned)
             elif slug in {"plain_cupcake", "berry_sweet_cupcake"}:
@@ -648,12 +651,6 @@ class MantItemManager:
         if master_qty + artisan_qty <= 0:
             return None
 
-        if 70 <= turn <= SENIOR_YEAR_END:
-            if master_qty > 0:
-                return "Master Cleat Hammer"
-            if artisan_qty > 0:
-                return "Artisan Cleat Hammer"
-            return None
 
         if turn in CLIMAX_RACE_TURNS:
             if master_qty > 0:
@@ -713,7 +710,10 @@ class MantItemManager:
             target_master = 3
             if total_cleats >= target_master and master_qty >= target_master:
                 return None
-            candidates = ("Master Cleat Hammer", "Artisan Cleat Hammer") if master_qty < target_master else ("Artisan Cleat Hammer",)
+            if total_cleats >= target_master:
+                candidates = ("Master Cleat Hammer",)
+            else:
+                candidates = ("Master Cleat Hammer", "Artisan Cleat Hammer") if master_qty < target_master else ("Artisan Cleat Hammer",)
             for candidate in candidates:
                 row = available_by_name.get(candidate)
                 if not row:
@@ -791,12 +791,18 @@ class MantItemManager:
                 continue
             if DISPLAY_TO_ID.get(name) in self.failed_use_this_turn:
                 continue
+            if name == "Grilled Carrots":
+                non_rainbow_count = 0
+                for row in chara.get("evaluation_info_array") or []:
+                    if int(row.get("target_id") or 0) in {1, 2, 3, 4, 5, 6} and int(row.get("evaluation") or 0) < 80:
+                        non_rainbow_count += 1
+                if non_rainbow_count == 0:
+                    continue
             if name in ONE_TIME_BUFF_ITEMS:
                 if name in self.used_buffs:
                     continue
                 targets.append((name, 1))
             else:
-
                 targets.append((name, qty))
 
         targets.extend(self._energy_targets(chara, owned, preset, best_command))

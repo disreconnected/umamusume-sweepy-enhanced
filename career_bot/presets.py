@@ -72,10 +72,10 @@ DEFAULT_MIN_STATS = [0, 0, 0, 0, 0]
 DEFAULT_MAX_STATS = [1200, 1200, 1200, 1200, 1200]
 
 # Trainee rank ladder (mirrors the in-game evaluation tier and the dashboard's
-# `VET_RANK_LABELS` in public/app.js). UG (rank id 19) is the entry threshold
-# into the Ultimate ("U*") tiers — that's what we tune presets to target by
-# default for parent-breeding runs. See data/uma_guides/UG_STRATEGY.md for
-# rank_score samples we observed (UG4 ~= 21,320 from MaybeVoid Taiki Shuttle).
+# `VET_RANK_LABELS` in public/app.js). Note: While UG (rank id 19) is the entry
+# threshold for the Ultimate tier, achieving UG reliably is far-fetched for
+# the current bot version without maxed setups. The realistic goal is S-Rank
+# minimum or stable high stats, gradually refining bot decision-making.
 RANK_ID_SSP = 18
 RANK_ID_UG = 19
 RANK_ID_UG_PLUS = 20

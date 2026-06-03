@@ -261,6 +261,9 @@
                                     <div id="deck-editor-status" class="friend-status"></div>
                                 </div>
                                 <div id="deck-editor-panel" class="deck-editor-panel" style="display:none"></div>
+                                <div class="filter-toolbar">
+                                    <input id="deck-search-input" class="form-input filter-search" type="text" placeholder="Search decks...">
+                                </div>
                                 <div id="deck-list"></div>
                             </div>
                         </section>
@@ -284,6 +287,31 @@
                                     <div id="friend-preview-panel" class="friend-preview-panel"></div>
                                     <div id="friend-follow-list" class="friend-follow-list"></div>
                                 </div>
+                                <div class="filter-toolbar">
+                                    <div class="filter-row">
+                                        <input id="friend-search-input" class="form-input filter-search" type="text" placeholder="Search card/friend name...">
+                                        <select id="friend-type-select" class="form-input filter-select">
+                                            <option value="all">All Types</option>
+                                            <option value="Speed">Speed</option>
+                                            <option value="Stamina">Stamina</option>
+                                            <option value="Power">Power</option>
+                                            <option value="Guts">Guts</option>
+                                            <option value="Wisdom">Wisdom</option>
+                                            <option value="Group">Group</option>
+                                            <option value="Friends">Friends</option>
+                                        </select>
+                                    </div>
+                                    <div class="filter-chip-row" id="friend-rarity-row">
+                                        <span class="filter-label">Rarity:</span>
+                                        <button class="filter-chip active" data-filter="SSR">SSR</button>
+                                        <button class="filter-chip active" data-filter="SR">SR</button>
+                                        <button class="filter-chip active" data-filter="R">R</button>
+                                        
+                                        <span class="filter-label" style="margin-left: auto;">LB:</span>
+                                        <button class="filter-chip active" data-filter="all">All</button>
+                                        <button class="filter-chip" data-filter="4">LB4</button>
+                                    </div>
+                                </div>
                                 <div id="friend-grid" class="data-grid"></div>
                             </div>
                         </section>
@@ -293,6 +321,9 @@
                                 TRAINEES <span id="uma-count"></span>
                             </h2>
                             <div id="trainees-body" class="collapsible-body expanded">
+                                <div class="filter-toolbar">
+                                    <input id="trainee-search-input" class="form-input filter-search" type="text" placeholder="Search trainees...">
+                                </div>
                                 <div id="uma-grid" class="data-grid"></div>
                             </div>
                         </section>
@@ -302,6 +333,46 @@
                                 PARENTS <span id="parent-count"></span>
                             </h2>
                             <div id="parents-body" class="collapsible-body expanded">
+                                <div class="filter-toolbar parents-filter-toolbar">
+                                    <div class="filter-row">
+                                        <input id="parent-search-input" class="form-input filter-search" type="text" placeholder="Search character/parent...">
+                                        <select id="parent-rank-select" class="form-input filter-select">
+                                            <option value="all">All Ranks</option>
+                                            <option value="UG">UG or higher</option>
+                                            <option value="SS">SS or higher</option>
+                                            <option value="S">S or higher</option>
+                                            <option value="A+">A+ or higher</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="spark-filter-container">
+                                        <div class="spark-filter-header" id="parent-spark-toggle">
+                                            <span class="spark-toggle-chevron">&#9658;</span> SPARK FILTERS
+                                        </div>
+                                        <div class="spark-filter-drawer" id="parent-spark-drawer" style="display: none;">
+                                            <div class="spark-category-group" data-category="blue">
+                                                <div class="spark-category-title">Blue Factors (Stats)</div>
+                                                <div class="spark-criteria-list" id="parent-blue-criteria"></div>
+                                                <button class="btn btn-sm btn-link add-spark-criterion-btn" type="button" data-category="blue">+ Add Blue Factor</button>
+                                            </div>
+                                            <div class="spark-category-group" data-category="pink">
+                                                <div class="spark-category-title">Pink Factors (Aptitude)</div>
+                                                <div class="spark-criteria-list" id="parent-pink-criteria"></div>
+                                                <button class="btn btn-sm btn-link add-spark-criterion-btn" type="button" data-category="pink">+ Add Pink Factor</button>
+                                            </div>
+                                            <div class="spark-category-group" data-category="green">
+                                                <div class="spark-category-title">Green Factors (Unique)</div>
+                                                <div class="spark-criteria-list" id="parent-green-criteria"></div>
+                                                <button class="btn btn-sm btn-link add-spark-criterion-btn" type="button" data-category="green">+ Add Green Factor</button>
+                                            </div>
+                                            <div class="spark-category-group" data-category="white">
+                                                <div class="spark-category-title">White Factors (Skills/Races)</div>
+                                                <div class="spark-criteria-list" id="parent-white-criteria"></div>
+                                                <button class="btn btn-sm btn-link add-spark-criterion-btn" type="button" data-category="white">+ Add White Factor</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div id="parent-grid" class="data-grid"></div>
                             </div>
                         </section>
@@ -315,6 +386,46 @@
                                 <div class="friend-toolbar">
                                     <div id="friend-vet-status" class="friend-status">Not loaded</div>
                                 </div>
+                                <div class="filter-toolbar friend-vets-filter-toolbar">
+                                    <div class="filter-row">
+                                        <input id="friend-vet-search-input" class="form-input filter-search" type="text" placeholder="Search character/trainer...">
+                                        <select id="friend-vet-rank-select" class="form-input filter-select">
+                                            <option value="all">All Ranks</option>
+                                            <option value="UG">UG or higher</option>
+                                            <option value="SS">SS or higher</option>
+                                            <option value="S">S or higher</option>
+                                            <option value="A+">A+ or higher</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="spark-filter-container">
+                                        <div class="spark-filter-header" id="friend-vet-spark-toggle">
+                                            <span class="spark-toggle-chevron">&#9658;</span> SPARK FILTERS
+                                        </div>
+                                        <div class="spark-filter-drawer" id="friend-vet-spark-drawer" style="display: none;">
+                                            <div class="spark-category-group" data-category="blue">
+                                                <div class="spark-category-title">Blue Factors (Stats)</div>
+                                                <div class="spark-criteria-list" id="friend-vet-blue-criteria"></div>
+                                                <button class="btn btn-sm btn-link add-spark-criterion-btn" type="button" data-category="blue">+ Add Blue Factor</button>
+                                            </div>
+                                            <div class="spark-category-group" data-category="pink">
+                                                <div class="spark-category-title">Pink Factors (Aptitude)</div>
+                                                <div class="spark-criteria-list" id="friend-vet-pink-criteria"></div>
+                                                <button class="btn btn-sm btn-link add-spark-criterion-btn" type="button" data-category="pink">+ Add Pink Factor</button>
+                                            </div>
+                                            <div class="spark-category-group" data-category="green">
+                                                <div class="spark-category-title">Green Factors (Unique)</div>
+                                                <div class="spark-criteria-list" id="friend-vet-green-criteria"></div>
+                                                <button class="btn btn-sm btn-link add-spark-criterion-btn" type="button" data-category="green">+ Add Green Factor</button>
+                                            </div>
+                                            <div class="spark-category-group" data-category="white">
+                                                <div class="spark-category-title">White Factors (Skills/Races)</div>
+                                                <div class="spark-criteria-list" id="friend-vet-white-criteria"></div>
+                                                <button class="btn btn-sm btn-link add-spark-criterion-btn" type="button" data-category="white">+ Add White Factor</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div id="friend-vet-grid" class="data-grid"></div>
                             </div>
                         </section>
@@ -324,6 +435,27 @@
                                 OWNED CARDS <span id="card-count"></span>
                             </h2>
                             <div id="card-grid-wrapper" class="collapsible-body">
+                                <div class="filter-toolbar">
+                                    <div class="filter-row">
+                                        <input id="card-search-input" class="form-input filter-search" type="text" placeholder="Search card name...">
+                                        <select id="card-type-select" class="form-input filter-select">
+                                            <option value="all">All Types</option>
+                                            <option value="Speed">Speed</option>
+                                            <option value="Stamina">Stamina</option>
+                                            <option value="Power">Power</option>
+                                            <option value="Guts">Guts</option>
+                                            <option value="Wisdom">Wisdom</option>
+                                            <option value="Group">Group</option>
+                                            <option value="Friends">Friends</option>
+                                        </select>
+                                    </div>
+                                    <div class="filter-chip-row" id="card-rarity-row">
+                                        <span class="filter-label">Rarity:</span>
+                                        <button class="filter-chip active" data-filter="SSR">SSR</button>
+                                        <button class="filter-chip active" data-filter="SR">SR</button>
+                                        <button class="filter-chip active" data-filter="R">R</button>
+                                    </div>
+                                </div>
                                 <div id="card-grid" class="data-grid"></div>
                             </div>
                         </section>

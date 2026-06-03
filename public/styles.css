@@ -3531,3 +3531,194 @@ body.dashboard-mode .turn-delay-control {
 .badge-preop {
   background: #9370db;
 }
+
+/* --- Library Search & Filter UI --- */
+.filter-toolbar {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.12);
+  margin-bottom: 0.5rem;
+}
+.filter-row {
+  display: flex;
+  gap: 0.4rem;
+}
+.filter-search {
+  height: 2.2rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.82rem;
+  flex: 1;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #fff;
+  min-width: 0;
+}
+.filter-select {
+  height: 2.2rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.82rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  min-width: 6.5rem;
+}
+.filter-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  padding: 0.15rem 0;
+}
+.filter-label {
+  color: var(--text-muted);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+}
+.filter-chip {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+.filter-chip.active {
+  background: rgba(var(--accent-primary-rgb), 0.15);
+  border-color: var(--accent-primary);
+  color: var(--text-main);
+}
+.spark-filter-container {
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  margin-top: 0.2rem;
+}
+.spark-filter-header {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: var(--accent-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.22);
+  text-transform: uppercase;
+  letter-spacing: 0.03rem;
+  user-select: none;
+}
+.spark-toggle-chevron {
+  font-size: 0.6rem;
+  transition: transform 0.15s;
+  display: inline-block;
+  color: var(--accent-primary);
+}
+.spark-toggle-chevron.expanded {
+  transform: rotate(90deg);
+}
+.spark-filter-drawer {
+  padding: 0.6rem;
+  background: rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+.spark-category-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.spark-category-title {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 800;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 1px;
+  text-transform: uppercase;
+  letter-spacing: 0.02rem;
+}
+.spark-criteria-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.spark-criterion-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 3px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.spark-criterion-select {
+  height: 1.8rem;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #000;
+  color: #fff;
+  flex: 2;
+  min-width: 0;
+}
+.spark-criterion-stars {
+  height: 1.8rem;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #000;
+  color: #fff;
+  flex: 1;
+  min-width: 0;
+}
+.spark-criterion-remove {
+  background: rgba(220, 38, 38, 0.15);
+  border: none;
+  color: #ef4444;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.spark-criterion-remove:hover {
+  background: rgba(220, 38, 38, 0.3);
+}
+.add-spark-criterion-btn {
+  font-size: 0.68rem;
+  text-align: left;
+  color: var(--accent-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 1px 3px;
+  opacity: 0.72;
+  transition: opacity 0.15s;
+  width: fit-content;
+}
+.add-spark-criterion-btn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+

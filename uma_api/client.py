@@ -679,12 +679,12 @@ class UmaClient:
         rc = dh.get('result_code', 0)
         print(f"[{ep}] data_headers: {dh}")
         
-        if rc == 1:
-            new_vid = dh.get('viewer_id')
-            if new_vid and int(new_vid) != self.viewer_id:
-                print(f"Aligning viewer_id from successful response: {self.viewer_id} -> {new_vid}")
-                self.viewer_id = int(new_vid)
-                self.regen_sid()
+        # Always check and align viewer_id from any response headers/data if returned and mismatched
+        new_vid = dh.get('viewer_id') or (res.get('data', {}) or {}).get('viewer_id')
+        if new_vid and int(new_vid) != 0 and int(new_vid) != int(self.viewer_id):
+            print(f"Aligning viewer_id from response headers: {self.viewer_id} -> {new_vid}")
+            self.viewer_id = int(new_vid)
+            self.regen_sid()
         
         self.api_log("RES", ep, res, req_id)
         

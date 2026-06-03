@@ -1,3 +1,4 @@
+from career_bot.items import ITEM_NAMES
 from career_bot.events import EventManager
 from career_bot.scenarios.base import Decision, ScenarioStrategy
 
@@ -14,7 +15,7 @@ STAT_TARGETS = {
 TRAINING_COMMANDS = {101: 0, 105: 1, 102: 2, 103: 3, 106: 4, 601: 0, 602: 1, 603: 2, 604: 3, 605: 4}
 TRAINING_NAMES = ["Speed", "Stamina", "Power", "Guts", "Wit"]
 SUMMER_CAMP_TURNS = {36, 37, 38, 39, 40, 60, 61, 62, 63, 64}
-SUMMER_CONSERVE_TURNS = {35, 36, 59, 60}
+SUMMER_CONSERVE_TURNS = {34, 35, 58, 59}
 SUMMER_CONSERVE_ENERGY = 60
 ENERGY_FAST_MEDIC = 80
 ENERGY_MEDIC_GENERAL = 85
@@ -66,9 +67,39 @@ class MantStrategy(ScenarioStrategy):
             forced_program_id = self.race_planner.forced_program(state)
             if forced_program_id:
                 return Decision("race", {"program_id": forced_program_id, "current_turn": chara["turn"], "_strategy": self}, self.race_planner.label(forced_program_id))
-            program_id = self.race_planner.choose(state, preset)
-            if program_id:
-                return Decision("race", {"program_id": program_id, "current_turn": chara["turn"], "_strategy": self}, self.race_planner.label(program_id))
+            
+            # Summer Camp Override: prioritize training during camp turns (36-39 and 60-63)
+            turn = chara["turn"]
+            is_camp = turn in {36, 37, 38, 39, 60, 61, 62, 63}
+            if is_camp:
+                command = self._best_command(data, chara, preset)
+                if self._should_train_in_camp(command, data, chara, preset):
+                    command_type = command.get("command_type", 1)
+                    command_id = command.get("command_id")
+                    command_group_id = command.get("command_group_id", 0)
+                    reason = self._command_reason(command)
+                    if command_type == 3:
+                        command_group_id = command_id
+                        command_id = 0
+                    return Decision("command", {
+                        "command_type": command_type,
+                        "command_id": command_id,
+                        "command_group_id": command_group_id,
+                        "select_id": command.get("select_id", 0),
+                        "current_turn": turn,
+                        "current_vital": chara.get("vital", 0),
+                    }, f"Summer Camp training: {reason}")
+                
+                # If training is bad/unsafe, abandon training and choose a planned or any available G2/G3 race
+                program_id = self.race_planner.choose(state, preset)
+                if not program_id:
+                    program_id = self._find_any_available_race(state)
+                if program_id:
+                    return Decision("race", {"program_id": program_id, "current_turn": turn, "_strategy": self}, f"Abandon training in camp -> race: {self.race_planner.label(program_id)}")
+            else:
+                program_id = self.race_planner.choose(state, preset)
+                if program_id:
+                    return Decision("race", {"program_id": program_id, "current_turn": turn, "_strategy": self}, self.race_planner.label(program_id))
         command = self._best_command(data, chara, preset)
         if command:
             command_type = command.get("command_type", 1)
@@ -141,6 +172,9 @@ class MantStrategy(ScenarioStrategy):
         if not training:
             if medic and bad_status and vital <= ENERGY_MEDIC_GENERAL:
                 return medic
+            riko_cmd = self._riko_outing_command(enabled, data)
+            if riko_cmd:
+                return riko_cmd
             return rest or recreation
 
         consecutive_race_count = data.get("consecutive_race_count", 0)
@@ -149,15 +183,8 @@ class MantStrategy(ScenarioStrategy):
             if medic and bad_status and vital <= ENERGY_MEDIC_GENERAL:
                 return medic
 
-            free = data.get("free_data_set") or {}
-            user_items = free.get("user_item_info_array") or []
-            owned_vitas = {2001: 0, 2002: 0, 2003: 0}
-            for row in user_items:
-                item_id = int(row.get("item_id") or 0)
-                qty = int(row.get("num") or row.get("current_num") or row.get("item_num") or 0)
-                if item_id in owned_vitas:
-                    owned_vitas[item_id] += qty
-            total_vita_recovery = (owned_vitas[2001] * 20) + (owned_vitas[2002] * 40) + (owned_vitas[2003] * 65)
+            total_vita_recovery = self._total_energy_recovery(data)
+            has_charm = self._has_charm(data)
 
             valid_tiles = []
             for cmd in training:
@@ -166,20 +193,20 @@ class MantStrategy(ScenarioStrategy):
                     total_gain = self._total_stat_gain(cmd)
                     if total_gain >= 30:
                         fail_rate = int(cmd.get("failure_rate") or 0)
-                        simulated_fail = max(0, fail_rate - total_vita_recovery)
+                        simulated_fail = 0 if has_charm else max(0, fail_rate - total_vita_recovery)
                         if simulated_fail <= 20:
                             score = self._score_command(cmd, data, chara, preset)
                             valid_tiles.append((score, cmd))
             if valid_tiles:
                 return max(valid_tiles, key=lambda row: row[0])[1]
 
+            riko_cmd = self._riko_outing_command(enabled, data)
+            if riko_cmd:
+                return riko_cmd
+
             wit_cmd = self._enabled_training_idx(enabled, 4)
             if wit_cmd:
                 return wit_cmd
-
-            bonds = self._bond_map(chara)
-            if 6 in bonds and recreation:
-                return recreation
 
             if rest:
                 return rest
@@ -200,30 +227,34 @@ class MantStrategy(ScenarioStrategy):
         if best_idx in {0, 1, 2}:
             best_total_gain = self._total_stat_gain(best)
             if best_total_gain >= 30:
-                free = data.get("free_data_set") or {}
-                user_items = free.get("user_item_info_array") or []
-                owned_vitas = {2001: 0, 2002: 0, 2003: 0}
-                for row in user_items:
-                    item_id = int(row.get("item_id") or 0)
-                    qty = int(row.get("num") or row.get("current_num") or row.get("item_num") or 0)
-                    if item_id in owned_vitas:
-                        owned_vitas[item_id] += qty
-                total_vita_recovery = (owned_vitas[2001] * 20) + (owned_vitas[2002] * 40) + (owned_vitas[2003] * 65)
-                simulated_fail = max(0, failure - total_vita_recovery)
+                total_vita_recovery = self._total_energy_recovery(data)
+                has_charm = self._has_charm(data)
+                simulated_fail = 0 if has_charm else max(0, failure - total_vita_recovery)
                 if simulated_fail <= 20:
                     bypass_rest = True
 
         if not bypass_rest:
             if turn in SUMMER_CAMP_TURNS and recreation and (vital <= rest_threshold or failure >= 35 or best_score < 0):
+                riko_cmd = self._riko_outing_command(enabled, data)
+                if riko_cmd:
+                    return riko_cmd
                 return recreation
             if self._should_recreate(recreation, preset, turn, motivation, vital, best_score):
-                return recreation
-            if rest and (vital <= rest_threshold or failure >= 35 or best_score < 0):
-                return rest
-        conserve = self._summer_conserve_command(enabled, turn, vital, best_score, preset, rest, recreation)
+                riko_cmd = self._riko_outing_command(enabled, data)
+                if riko_cmd:
+                    return riko_cmd
+                if preset.get("prioritize_recreation") and recreation:
+                    return recreation
+            if vital <= rest_threshold or failure >= 35 or best_score < 0:
+                riko_cmd = self._riko_outing_command(enabled, data)
+                if riko_cmd:
+                    return riko_cmd
+                if rest:
+                    return rest
+        conserve = self._summer_conserve_command(enabled, turn, vital, best_score, preset, rest, recreation, data)
         if conserve:
             return conserve
-        # UG strategy: when the best training is meaningfully below the
+        # S-Rank / High-Stat strategy: when the best training is meaningfully below the
         # "+40 total stats" rule of thumb AND we still have race headroom in
         # the preset's race budget, prefer to skip training (returning None
         # lets the race planner / outer scenario hand back control). The
@@ -243,6 +274,9 @@ class MantStrategy(ScenarioStrategy):
         ):
             best_total_gain = self._total_stat_gain(best)
             if best_total_gain > 0 and best_total_gain < train_min_gain * 0.55:
+                riko_cmd = self._riko_outing_command(enabled, data)
+                if riko_cmd:
+                    return riko_cmd
                 return rest
         return best
 
@@ -255,6 +289,21 @@ class MantStrategy(ScenarioStrategy):
     def _recreation_command(self, commands):
         for cmd in commands:
             if cmd.get("command_type") == 3:
+                return cmd
+        return None
+
+    def _is_friend_outing_available(self, data):
+        chara = data.get("chara_info") or {}
+        for row in chara.get("evaluation_info_array") or []:
+            if row.get("is_outing") == 1 and int(row.get("story_step") or 0) < 5:
+                return True
+        return False
+
+    def _riko_outing_command(self, commands, data):
+        if not self._is_friend_outing_available(data):
+            return None
+        for cmd in commands:
+            if cmd.get("command_type") == 3 and cmd.get("command_id") in {301, 302, 303, 304, 305}:
                 return cmd
         return None
 
@@ -276,7 +325,7 @@ class MantStrategy(ScenarioStrategy):
                 return cmd
         return None
 
-    def _summer_conserve_command(self, enabled, turn, vital, best_score, preset, rest, recreation):
+    def _summer_conserve_command(self, enabled, turn, vital, best_score, preset, rest, recreation, data):
         if turn not in SUMMER_CONSERVE_TURNS:
             return None
         if best_score >= float(preset.get("summer_score_threshold") or 0.34):
@@ -284,6 +333,9 @@ class MantStrategy(ScenarioStrategy):
         if vital < SUMMER_CONSERVE_ENERGY:
             if turn in SUMMER_CAMP_TURNS and recreation:
                 return recreation
+            riko_cmd = self._riko_outing_command(enabled, data)
+            if riko_cmd:
+                return riko_cmd
             return rest
         return self._enabled_training_idx(enabled, 4)
 
@@ -402,7 +454,7 @@ class MantStrategy(ScenarioStrategy):
             current_stat = self._current_stat(chara, target) if target < 5 else 0.0
             if floor > 0 and target < 5 and current_stat < floor and value > 0:
                 stat_gain_score *= min_stats_boost
-            # UG strategy: rank_score scales harder on stats near 1000
+            # S-Rank / High-Stat calibration: rank_score scales harder on stats near 1000
             # (MaybeVoid Taiki Shuttle commentary). Apply a small +8% bonus
             # when the stat is in [820, 1060]. Cheap to encode and keeps the
             # bot from drifting away from sub-1000 stats too early.
@@ -578,3 +630,73 @@ class MantStrategy(ScenarioStrategy):
         if self.event_manager:
             return self.event_manager.choose(event)
         return 1
+
+    def _owned_items(self, data):
+        from career_bot.items import ITEM_NAMES
+        free = data.get("free_data_set") or {}
+        user_items = free.get("user_item_info_array") or []
+        owned = {}
+        for row in user_items:
+            item_id = int(row.get("item_id") or 0)
+            qty = int(row.get("num") or row.get("current_num") or row.get("item_num") or 0)
+            name = ITEM_NAMES.get(item_id)
+            if name:
+                owned[name] = qty
+        return owned
+
+    def _total_energy_recovery(self, data):
+        owned = self._owned_items(data)
+        return (
+            owned.get("Vita 20", 0) * 20 +
+            owned.get("Vita 40", 0) * 40 +
+            owned.get("Vita 65", 0) * 65 +
+            owned.get("Royal Kale Juice", 0) * 100 +
+            owned.get("Energy Drink MAX", 0) * 100
+        )
+
+    def _has_charm(self, data):
+        owned = self._owned_items(data)
+        return owned.get("Good-Luck Charm", 0) > 0
+
+    def _should_train_in_camp(self, command, data, chara, preset):
+        if not command or command.get("command_type") != 1:
+            return False
+            
+        fail_rate = int(command.get("failure_rate") or 0)
+        has_charm = self._has_charm(data)
+        total_recovery = self._total_energy_recovery(data)
+        
+        can_heal = fail_rate - total_recovery <= 18
+        can_train_safely = fail_rate <= 18 or has_charm or can_heal
+        
+        if not can_train_safely:
+            return False
+            
+        best_total_gain = self._total_stat_gain(command)
+        owned = self._owned_items(data)
+        has_whistle = owned.get("Reset Whistle", 0) > 0
+        
+        # If training is decent (gain >= 25 stats) or we can shuffle it, we train!
+        if best_total_gain >= 25 or has_whistle:
+            return True
+            
+        return False
+
+    def _find_any_available_race(self, state):
+        if not self.race_planner:
+            return 0
+        data = state.get("data") or {}
+        chara = data.get("chara_info") or {}
+        available = self.race_planner.available_programs(state)
+        
+        for pid in available:
+            if (chara.get("turn"), pid) in self.race_planner.rejected:
+                continue
+            if not self.race_planner.check_aptitude(chara, pid):
+                continue
+            info = self.race_planner.program.get(pid) or {}
+            race_inst = str(info.get("race_instance_id") or "")
+            # Return the first G2 or G3 race that matches aptitude
+            if race_inst.startswith("2") or race_inst.startswith("3"):
+                return pid
+        return 0
