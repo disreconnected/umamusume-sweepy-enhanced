@@ -1,0 +1,3502 @@
+[
+  {
+    "raceName": "Hakodate Junior Stakes",
+    "grade": "G3",
+    "year": "First Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇒ Hakodate",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Niigata Junior Stakes",
+    "grade": "G3",
+    "year": "First Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Kokura Junior Stakes",
+    "grade": "G3",
+    "year": "First Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Sapporo Junior Stakes",
+    "grade": "G3",
+    "year": "First Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Saudi Arabia Royal Cup",
+    "grade": "G3",
+    "year": "First Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Artemis Stakes",
+    "grade": "G3",
+    "year": "First Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Daily Hai Junior Stakes",
+    "grade": "G2",
+    "year": "First Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Fantasy Stakes",
+    "grade": "G3",
+    "year": "First Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Keio Hai Junior Stakes",
+    "grade": "G2",
+    "year": "First Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Kyoto Junior Stakes",
+    "grade": "G3",
+    "year": "First Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Tokyo Sports Hai Junior Stakes",
+    "grade": "G3",
+    "year": "First Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Asahi Hai Futurity Stakes",
+    "grade": "G1",
+    "year": "First Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Hanshin Juvenile Fillies",
+    "grade": "G1",
+    "year": "First Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Hopeful Stakes",
+    "grade": "G1",
+    "year": "First Year",
+    "turn": "12_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Keisei Hai",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Shinzan Kinen",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Fairy Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Kyodo News Hai",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "02_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Kisaragi Sho",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "02_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Queen Cup",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "02_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Fillies' Revue",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "03_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Tulip Sho",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "03_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Yayoi Sho",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "03_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Falcon Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Flower Cup",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Mainichi Hai",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Spring Stakes",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Arlington Cup",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "04_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "New Zealand Trophy",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "04_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Oka Sho",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "04_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Satsuki Sho",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "04_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Aoba Sho",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "04_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Flora Stakes",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "04_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Kyoto Shimbun Hai",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "NHK Mile Cup",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Aoi Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "05_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Japanese Oaks",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "05_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Tokyo Yushun (Japanese Derby)",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "05_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Epsom Cup",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "06_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Naruo Kinen",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "06_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Mermaid Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "06_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Yasuda Kinen",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "06_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Hakodate Sprint Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "06_02",
+    "type": "Turf",
+    "location": "⇒ Hakodate",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Takarazuka Kinen",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "06_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "Unicorn Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "06_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "CBC Sho",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "07_01",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Hakodate Kinen",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "07_01",
+    "type": "Turf",
+    "location": "⇒ Hakodate",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Japan Dirt Derby",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "07_01",
+    "type": "Dirt",
+    "location": "⇒ Oi",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Procyon Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "07_01",
+    "type": "Dirt",
+    "location": "⇐ Chukyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Radio Nikkei Sho",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "07_01",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Tanabata Sho",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "07_01",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Chukyo Kinen",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Ibis Summer Dash",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇑ Niigata",
+    "length": "Sprint",
+    "lengthM": "1000 m"
+  },
+  {
+    "raceName": "Queen Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Elm Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "08_01",
+    "type": "Dirt",
+    "location": "⇒ Sapporo",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Leopard Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "08_01",
+    "type": "Dirt",
+    "location": "⇐ Niigata",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Sekiya Kinen",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Kokura Kinen",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Keeneland Cup",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Kitakyushu Kinen",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Sapporo Kinen",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Keisei Hai Autumn Handicap",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Rose Stakes",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Centaur Stakes",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Niigata Kinen",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Shion Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Sirius Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "09_02",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "St. Lite Kinen",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "All Comers",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "Kobe Shimbun Hai",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Sprinters Stakes",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Fuchu Umamusume Stakes",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Kyoto Daishoten",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Mainichi Okan",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Fuji Stakes",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Swan Stakes",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Kikuka Sho",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Long",
+    "lengthM": "3000 m"
+  },
+  {
+    "raceName": "Shuka Sho",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Tenno Sho (Autumn)",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Copa Republica Argentina",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Long",
+    "lengthM": "2500 m"
+  },
+  {
+    "raceName": "Fukushima Kinen",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "JBC Classic",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "Varies",
+    "length": "Medium",
+    "lengthM": "2000m"
+  },
+  {
+    "raceName": "Miyako Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Musashino Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "JBC Ladies' Classic",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "Varies",
+    "length": "Mile",
+    "lengthM": "Varies"
+  },
+  {
+    "raceName": "JBC Sprint",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "Varies",
+    "length": "Sprint",
+    "lengthM": "Varies"
+  },
+  {
+    "raceName": "Queen Elizabeth II Cup",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "Japan Cup",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Keihan Hai",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Mile Championship",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Capella Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Challenge Cup",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Champions Cup",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Dirt",
+    "location": "⇐ Chukyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Chunichi Shimbun Hai",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Stayers Stakes",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Long",
+    "lengthM": "3600 m"
+  },
+  {
+    "raceName": "Turquoise Stakes",
+    "grade": "G3",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Hanshin Cup",
+    "grade": "G2",
+    "year": "Second Year",
+    "turn": "12_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Tokyo Daishoten",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "12_02",
+    "type": "Dirt",
+    "location": "⇒ Oi",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Arima Kinen",
+    "grade": "G1",
+    "year": "Second Year",
+    "turn": "12_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Long",
+    "lengthM": "2500 m"
+  },
+  {
+    "raceName": "Kyoto Kimpai",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Nakayama Kimpai",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Nikkei Shinshun Hai",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Aichi Hai",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "American JCC",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "01_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "Negishi Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "01_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Tokai Stakes",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "01_02",
+    "type": "Dirt",
+    "location": "⇐ Chukyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Silk Road Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "01_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Kyoto Kinen",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "02_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "Tokyo Shimbun Hai",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "02_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "February Stakes",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "02_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Diamond Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "02_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Long",
+    "lengthM": "3400 m"
+  },
+  {
+    "raceName": "Hankyu Hai",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "02_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Kokura Daishoten",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "02_02",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Kyoto Umamusume Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "02_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Nakayama Kinen",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "02_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Nakayama Umamusume Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "03_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Kinko Sho",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "03_01",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Ocean Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "03_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Hanshin Daishoten",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Long",
+    "lengthM": "3000 m"
+  },
+  {
+    "raceName": "Nikkei Sho",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Long",
+    "lengthM": "2500 m"
+  },
+  {
+    "raceName": "Osaka Hai",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Takamatsunomiya Kinen",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "March Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "03_02",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Antares Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "04_01",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Hanshin Umamusume Stakes",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "04_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Lord Derby Challenge Trophy",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "04_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Milers Cup",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "04_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Tenno Sho (Spring)",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "04_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Long",
+    "lengthM": "3200 m"
+  },
+  {
+    "raceName": "Fukushima Umamusume Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "04_02",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Niigata Daishoten",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Victoria Mile",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Keio Hai Spring Cup",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Heian Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "05_02",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "1900 m"
+  },
+  {
+    "raceName": "Meguro Kinen",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "05_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Long",
+    "lengthM": "2500 m"
+  },
+  {
+    "raceName": "Mermaid Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "06_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Yasuda Kinen",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "06_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Epsom Cup",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "06_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Naruo Kinen",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "06_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Takarazuka Kinen",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "06_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "Teio Sho",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "06_02",
+    "type": "Dirt",
+    "location": "⇒ Oi",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Hakodate Sprint Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "06_02",
+    "type": "Turf",
+    "location": "⇒ Hakodate",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "CBC Sho",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "07_01",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Hakodate Kinen",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "07_01",
+    "type": "Turf",
+    "location": "⇒ Hakodate",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Procyon Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "07_01",
+    "type": "Dirt",
+    "location": "⇐ Chukyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Tanabata Sho",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "07_01",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Chukyo Kinen",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Ibis Summer Dash",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇑ Niigata",
+    "length": "Sprint",
+    "lengthM": "1000 m"
+  },
+  {
+    "raceName": "Queen Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Kokura Kinen",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Elm Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "08_01",
+    "type": "Dirt",
+    "location": "⇒ Sapporo",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Sekiya Kinen",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Kitakyushu Kinen",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Sapporo Kinen",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Keeneland Cup",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Centaur Stakes",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Niigata Kinen",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Keisei Hai Autumn Handicap",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "All Comers",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "Sprinters Stakes",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Sirius Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "09_02",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Fuchu Umamusume Stakes",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Kyoto Daishoten",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Mainichi Okan",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Tenno Sho (Autumn)",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Fuji Stakes",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Swan Stakes",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "JBC Ladies' Classic",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "Varies",
+    "length": "Mile",
+    "lengthM": "Varies"
+  },
+  {
+    "raceName": "JBC Sprint",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "Varies",
+    "length": "Sprint",
+    "lengthM": "Varies"
+  },
+  {
+    "raceName": "Queen Elizabeth II Cup",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "Copa Republica Argentina",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Long",
+    "lengthM": "2500 m"
+  },
+  {
+    "raceName": "Fukushima Kinen",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "JBC Classic",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "Varies",
+    "length": "Medium",
+    "lengthM": "2000m"
+  },
+  {
+    "raceName": "Miyako Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Musashino Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "11_01",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Japan Cup",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Keihan Hai",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Mile Championship",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Champions Cup",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Dirt",
+    "location": "⇐ Chukyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Chunichi Shimbun Hai",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Stayers Stakes",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Long",
+    "lengthM": "3600 m"
+  },
+  {
+    "raceName": "Turquoise Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Capella Stakes",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Challenge Cup",
+    "grade": "G3",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Arima Kinen",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "12_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Long",
+    "lengthM": "2500 m"
+  },
+  {
+    "raceName": "Hanshin Cup",
+    "grade": "G2",
+    "year": "Third Year",
+    "turn": "12_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Tokyo Daishoten",
+    "grade": "G1",
+    "year": "Third Year",
+    "turn": "12_02",
+    "type": "Dirt",
+    "location": "⇒ Oi",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Chukyo Junior Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇐ Chukyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Cosmos Sho",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Dahlia Sho",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Phoenix Sho",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Clover Sho",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Mile",
+    "lengthM": "1500 m"
+  },
+  {
+    "raceName": "Nojigiku Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Suzuran Sho",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Canna Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Fuyo Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Kikyo Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Momiji Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Hagi Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Ivy Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Fukushima Junior Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Christmas Rose Stakes",
+    "grade": "OP",
+    "year": "First Year",
+    "turn": "12_02",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Junior Cup",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Kobai Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Crocus Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "01_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Wakagoma Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "01_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Elfin Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "02_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Hyacinth Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "02_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Marguerite Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "02_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Sumire Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "02_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2200 m"
+  },
+  {
+    "raceName": "Anemone Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "03_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Shoryu Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "03_01",
+    "type": "Dirt",
+    "location": "⇐ Chukyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Wakaba Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Fukuryu Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "04_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Wasurenagusa Sho",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "04_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Sweetpea Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "04_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Tachibana Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "04_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Tango Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "04_02",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Principal Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Seiryu Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "05_01",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Hosu Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "05_02",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Shirayuri Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "05_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Sleipnir Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "06_01",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2100 m"
+  },
+  {
+    "raceName": "Tempozan Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "06_01",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Akhalteke Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "06_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Onuma Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "06_02",
+    "type": "Dirt",
+    "location": "⇒ Hakodate",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Paradise Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "06_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Sannomiya Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "06_02",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Yonago Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "06_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Marine Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "07_01",
+    "type": "Dirt",
+    "location": "⇒ Hakodate",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Meitetsu Hai",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "07_01",
+    "type": "Dirt",
+    "location": "⇐ Chukyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Tomoe Sho",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "07_01",
+    "type": "Turf",
+    "location": "⇒ Hakodate",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Fukushima TV Open",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Aso Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "08_01",
+    "type": "Dirt",
+    "location": "⇒ Kokura",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Kanetsu Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Sapporo Nikkei Open",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Long",
+    "lengthM": "2600 m"
+  },
+  {
+    "raceName": "UHB Sho",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "BSN Sho",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "08_02",
+    "type": "Dirt",
+    "location": "⇐ Niigata",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Kokura Nikkei Open",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "NST Sho",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "08_02",
+    "type": "Dirt",
+    "location": "⇐ Niigata",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Toki Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Enif Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "09_01",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Radio Nippon Sho",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "09_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Tancho Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Long",
+    "lengthM": "2600 m"
+  },
+  {
+    "raceName": "Nagatsuki Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "09_02",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Port Island Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Green Channel Cup",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "10_01",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "October Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Opal Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Shinetsu Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Uzumasa Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "10_01",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Brazil Cup",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "10_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2100 m"
+  },
+  {
+    "raceName": "Cassiopeia Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Lumiere Autumn Dash",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇑ Niigata",
+    "length": "Sprint",
+    "lengthM": "1000 m"
+  },
+  {
+    "raceName": "Muromachi Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "10_02",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Oro Cup",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Andromeda Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Autumn Leaf Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "11_02",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Capital Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Fukushima Minyu Cup",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "11_02",
+    "type": "Dirt",
+    "location": "⇒ Fukushima",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Shimotsuki Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "11_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "December Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Lapis Lazuli Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Rigel Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Shiwasu Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Tanzanite Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Betelgeuse Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "12_02",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Galaxy Stakes",
+    "grade": "OP",
+    "year": "Second Year",
+    "turn": "12_02",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Carbuncle Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "January Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Manyo Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Long",
+    "lengthM": "3000 m"
+  },
+  {
+    "raceName": "New Year Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Pollux Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Yodo Tankyori Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "01_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Shirafuji Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "01_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Subaru Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "01_02",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Aldebaran Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "02_01",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "1900 m"
+  },
+  {
+    "raceName": "Rakuyo Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "02_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Valentine Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "02_01",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Yamato Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "02_01",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Kitakyushu Tankyori Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "02_02",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Sobu Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "02_02",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Kochi Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "03_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Nigawa Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "03_01",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Osakajo Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "03_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Polaris Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "03_01",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Chiba Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "03_02",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Rokko Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "03_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Azumakofuji Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "04_01",
+    "type": "Dirt",
+    "location": "⇒ Fukushima",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Coral Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "04_01",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Fukushima Mimpo Hai",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "04_01",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Keiyo Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "04_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Shunrai Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "04_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Oasis Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "04_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Tennozan Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "04_02",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Brilliant Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_01",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2100 m"
+  },
+  {
+    "raceName": "Kurama Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Metropolitan Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2400 m"
+  },
+  {
+    "raceName": "Miyakooji Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Ritto Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_01",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Tanigawadake Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Azuchijo Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Idaten Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_02",
+    "type": "Turf",
+    "location": "⇑ Niigata",
+    "length": "Sprint",
+    "lengthM": "1000 m"
+  },
+  {
+    "raceName": "Keyaki Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "May Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "05_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Sleipnir Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "06_01",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2100 m"
+  },
+  {
+    "raceName": "Tempozan Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "06_01",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Akhalteke Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "06_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Onuma Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "06_02",
+    "type": "Dirt",
+    "location": "⇒ Hakodate",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Paradise Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "06_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Sannomiya Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "06_02",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Yonago Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "06_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Marine Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "07_01",
+    "type": "Dirt",
+    "location": "⇒ Hakodate",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Meitetsu Hai",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "07_01",
+    "type": "Dirt",
+    "location": "⇐ Chukyo",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Tomoe Sho",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "07_01",
+    "type": "Turf",
+    "location": "⇒ Hakodate",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Fukushima TV Open",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "07_02",
+    "type": "Turf",
+    "location": "⇒ Fukushima",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Aso Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "08_01",
+    "type": "Dirt",
+    "location": "⇒ Kokura",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Kanetsu Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Sapporo Nikkei Open",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Long",
+    "lengthM": "2600 m"
+  },
+  {
+    "raceName": "UHB Sho",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "08_01",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "BSN Sho",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "08_02",
+    "type": "Dirt",
+    "location": "⇐ Niigata",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Kokura Nikkei Open",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇒ Kokura",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "NST Sho",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "08_02",
+    "type": "Dirt",
+    "location": "⇐ Niigata",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Toki Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "08_02",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Enif Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "09_01",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Radio Nippon Sho",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "09_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Tancho Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "09_01",
+    "type": "Turf",
+    "location": "⇒ Sapporo",
+    "length": "Long",
+    "lengthM": "2600 m"
+  },
+  {
+    "raceName": "Nagatsuki Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "09_02",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Port Island Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "09_02",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Green Channel Cup",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "10_01",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "October Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Opal Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Shinetsu Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "10_01",
+    "type": "Turf",
+    "location": "⇐ Niigata",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Uzumasa Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "10_01",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Brazil Cup",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "10_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Medium",
+    "lengthM": "2100 m"
+  },
+  {
+    "raceName": "Cassiopeia Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Lumiere Autumn Dash",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "10_02",
+    "type": "Turf",
+    "location": "⇑ Niigata",
+    "length": "Sprint",
+    "lengthM": "1000 m"
+  },
+  {
+    "raceName": "Muromachi Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "10_02",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Oro Cup",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "11_01",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "Andromeda Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇒ Kyoto",
+    "length": "Medium",
+    "lengthM": "2000 m"
+  },
+  {
+    "raceName": "Autumn Leaf Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "11_02",
+    "type": "Dirt",
+    "location": "⇒ Kyoto",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Capital Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "11_02",
+    "type": "Turf",
+    "location": "⇐ Tokyo",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Fukushima Minyu Cup",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "11_02",
+    "type": "Dirt",
+    "location": "⇒ Fukushima",
+    "length": "Mile",
+    "lengthM": "1700 m"
+  },
+  {
+    "raceName": "Shimotsuki Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "11_02",
+    "type": "Dirt",
+    "location": "⇐ Tokyo",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  },
+  {
+    "raceName": "December Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Lapis Lazuli Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Nakayama",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Rigel Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1600 m"
+  },
+  {
+    "raceName": "Shiwasu Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Dirt",
+    "location": "⇒ Nakayama",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Tanzanite Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "12_01",
+    "type": "Turf",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1200 m"
+  },
+  {
+    "raceName": "Betelgeuse Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "12_02",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Mile",
+    "lengthM": "1800 m"
+  },
+  {
+    "raceName": "Galaxy Stakes",
+    "grade": "OP",
+    "year": "Third Year",
+    "turn": "12_02",
+    "type": "Dirt",
+    "location": "⇒ Hanshin",
+    "length": "Sprint",
+    "lengthM": "1400 m"
+  }
+]
