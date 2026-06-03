@@ -46,9 +46,9 @@ class ConverterApp(tk.Tk):
             with open(self.db_path, "r", encoding="utf-8") as f:
                 self.races_db = json.load(f)
                 
-            # Build lookup keyed by (normalized_name, turn)
+            # Build lookup keyed by (normalized_name, year, turn)
             for race in self.races_db:
-                key = (normalize_name(race["raceName"]), race["turn"])
+                key = (normalize_name(race["raceName"]), race["year"], race["turn"])
                 self.db_lookup[key] = race
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load races database: {e}")
@@ -204,7 +204,7 @@ class ConverterApp(tk.Tk):
             mapped_year = YEAR_MAP.get(raw_year.lower(), raw_year)
             
             # Search in our database
-            lookup_key = (normalize_name(race_name), turn)
+            lookup_key = (normalize_name(race_name), mapped_year, turn)
             db_match = self.db_lookup.get(lookup_key)
             
             if db_match:
