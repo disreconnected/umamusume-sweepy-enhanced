@@ -21,3 +21,7 @@ data/presets/uma.moe*.json
 data/uma_guides/*/
 !data/uma_guides/*.md
 
+# Superpowers brainstorm mockups
+/.superpowers
+
+
