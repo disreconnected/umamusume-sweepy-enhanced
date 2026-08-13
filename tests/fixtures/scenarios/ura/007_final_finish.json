@@ -1,0 +1,45 @@
+{
+  "name": "007_final_finish",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 90000,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 1,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "state": 3,
+        "turn": 72,
+        "vital": 80,
+        "wiz": 100
+      },
+      "single_mode_finish_common": {
+        "result_code": 1
+      },
+      "ura_final_info": {
+        "final_program_id": 10999,
+        "is_final": true,
+        "result": 0
+      }
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "fura_viewer"
+    }
+  },
+  "scenario": "ura"
+}

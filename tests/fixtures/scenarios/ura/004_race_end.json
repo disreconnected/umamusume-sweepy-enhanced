@@ -1,0 +1,87 @@
+{
+  "name": "004_race_end",
+  "request": {
+    "endpoint": "single_mode_free/race_end",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 1,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 12,
+        "vital": 60,
+        "wiz": 100
+      },
+      "free_data_set": {
+        "coin_num": 0,
+        "item_effect_array": [],
+        "pick_up_item_info_array": [],
+        "rival_race_info_array": [],
+        "user_item_info_array": []
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": [
+          {
+            "command_group_id": 0,
+            "command_id": 101,
+            "command_type": 1,
+            "failure_rate": 12,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 1,
+                "value": 20
+              },
+              {
+                "target_type": 10,
+                "value": -10
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": [
+              1
+            ]
+          },
+          {
+            "command_group_id": 0,
+            "command_id": 701,
+            "command_type": 7,
+            "failure_rate": 0,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 10,
+                "value": 25
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          }
+        ]
+      }
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "fura_viewer"
+    }
+  },
+  "scenario": "ura"
+}

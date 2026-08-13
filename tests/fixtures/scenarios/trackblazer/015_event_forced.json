@@ -1,0 +1,56 @@
+{
+  "name": "015_event_forced",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 4,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 13,
+        "vital": 80,
+        "wiz": 100
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": []
+      },
+      "unchecked_event_array": [
+        {
+          "chara_id": 100101,
+          "event_contents_info": {
+            "choice_array": [
+              {
+                "reward_array": [],
+                "select_index": 1
+              }
+            ]
+          },
+          "event_id": 502,
+          "story_id": "400004002"
+        }
+      ]
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "ftrackblazer_viewer"
+    }
+  },
+  "scenario": "trackblazer"
+}

@@ -1,0 +1,83 @@
+{
+  "name": "004_promo_ready",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 3,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 30,
+        "vital": 80,
+        "wiz": 100
+      },
+      "concert_info": {
+        "grand_concert_ready": false,
+        "hype": 40,
+        "learned_song_count": 5,
+        "performance_point_array": [
+          {
+            "key": "speed",
+            "value": 90
+          }
+        ],
+        "promo_done": false,
+        "promo_program_id": 30101,
+        "promo_ready": true,
+        "song_array": [],
+        "songs_this_half": 0,
+        "technique_array": []
+      },
+      "free_data_set": {
+        "coin_num": 0,
+        "item_effect_array": [],
+        "pick_up_item_info_array": [],
+        "rival_race_info_array": [],
+        "user_item_info_array": []
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": [
+          {
+            "command_group_id": 0,
+            "command_id": 401,
+            "command_type": 4,
+            "failure_rate": 0,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          }
+        ]
+      },
+      "race_condition_array": [
+        {
+          "program_id": 30101,
+          "turn": 30
+        }
+      ]
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "fgrand_concert_viewer"
+    }
+  },
+  "scenario": "grand_concert"
+}

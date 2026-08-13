@@ -1,0 +1,60 @@
+{
+  "name": "006_event_multi",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 3,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 40,
+        "vital": 80,
+        "wiz": 100
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": []
+      },
+      "unchecked_event_array": [
+        {
+          "chara_id": 100101,
+          "event_contents_info": {
+            "choice_array": [
+              {
+                "reward_array": [],
+                "select_index": 1
+              },
+              {
+                "reward_array": [],
+                "select_index": 2
+              }
+            ]
+          },
+          "event_id": 801,
+          "story_id": "800001"
+        }
+      ]
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "fgrand_concert_viewer"
+    }
+  },
+  "scenario": "grand_concert"
+}

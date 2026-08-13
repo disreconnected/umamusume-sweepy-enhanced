@@ -1,0 +1,119 @@
+{
+  "name": "002_technique_offer",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 3,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 16,
+        "vital": 20,
+        "wiz": 100
+      },
+      "concert_info": {
+        "grand_concert_ready": false,
+        "hype": 12,
+        "learned_song_count": 3,
+        "performance_point_array": [
+          {
+            "key": "speed",
+            "value": 40
+          }
+        ],
+        "promo_done": false,
+        "promo_program_id": 30101,
+        "promo_ready": false,
+        "song_array": [],
+        "songs_this_half": 3,
+        "technique_array": [
+          {
+            "cost": 20,
+            "deck_relevant": false,
+            "energy_recovery": 40,
+            "name": "Recovery Chorus",
+            "owned": false,
+            "technique_id": 1
+          },
+          {
+            "cost": 25,
+            "deck_relevant": false,
+            "energy_recovery": 0,
+            "name": "Power Ballad",
+            "owned": false,
+            "technique_id": 3
+          }
+        ]
+      },
+      "free_data_set": {
+        "coin_num": 0,
+        "item_effect_array": [],
+        "pick_up_item_info_array": [],
+        "rival_race_info_array": [],
+        "user_item_info_array": []
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": [
+          {
+            "command_group_id": 0,
+            "command_id": 101,
+            "command_type": 1,
+            "failure_rate": 40,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 1,
+                "value": 20
+              },
+              {
+                "target_type": 10,
+                "value": -15
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          },
+          {
+            "command_group_id": 0,
+            "command_id": 701,
+            "command_type": 7,
+            "failure_rate": 0,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 10,
+                "value": 25
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          }
+        ]
+      }
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "fgrand_concert_viewer"
+    }
+  },
+  "scenario": "grand_concert"
+}

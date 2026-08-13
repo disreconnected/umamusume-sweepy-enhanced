@@ -1,0 +1,65 @@
+{
+  "name": "005_grand_ready",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 3,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 71,
+        "vital": 70,
+        "wiz": 100
+      },
+      "concert_info": {
+        "grand_concert_ready": true,
+        "hype": 90,
+        "learned_song_count": 15,
+        "performance_point_array": [
+          {
+            "key": "speed",
+            "value": 200
+          }
+        ],
+        "promo_done": true,
+        "promo_program_id": 30101,
+        "promo_ready": false,
+        "song_array": [],
+        "songs_this_half": 4,
+        "technique_array": []
+      },
+      "free_data_set": {
+        "coin_num": 0,
+        "item_effect_array": [],
+        "pick_up_item_info_array": [],
+        "rival_race_info_array": [],
+        "user_item_info_array": []
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": []
+      }
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "fgrand_concert_viewer"
+    }
+  },
+  "scenario": "grand_concert"
+}

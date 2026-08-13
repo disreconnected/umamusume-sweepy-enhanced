@@ -282,99 +282,119 @@ class MantItemManager:
             self.shop_snapshot_key = key
             self.failed_exchange_this_snapshot = set()
 
-    def handle(self, client, state, preset, best_command=None, status=None, race_planner=None):
-        current = state
-        self.recover_after_exchange_error = False
-        current, bought = self.buy_shop_items(client, current, preset, race_planner)
-
-        self.recover_after_use_error = False
-        current, used = self.use_items(client, current, preset, best_command, status, race_planner)
-
-        return current, bought, used
-
-    def handle_pre_race(self, client, state, preset, payload, status=None, race_planner=None):
-        self.recover_after_exchange_error = False
-        current, bought = self.buy_shop_items(client, state, preset, race_planner)
-
-        self.recover_after_use_error = False
-        current, instant_used = self.use_items(client, current, preset, None, status, race_planner)
-        data = current.get("data") or {}
+    def preview_use(self, state, preset, best_command=None, program_id=0):
+        """Legal owned items with a `suggested` flag from the migrated MANT
+        use rules (energy/ailment/mood/whistle/charm/megaphone/anklet/cleats).
+        Pure — never mutates game state."""
+        data = state.get("data") or {}
         free = data.get("free_data_set") or {}
         chara = data.get("chara_info") or {}
         owned = self._owned_map(free)
-        self.last_pre_race_use_selected = []
-        self.last_pre_race_use_attempt = []
-        self.last_pre_race_use_result = {}
-
-        turn = int(chara.get("turn") or 0)
-        self._set_turn(turn)
-        program_id = int((payload or {}).get("program_id") or 0)
-
+        current_turn = int(chara.get("turn") or 0)
+        self._set_turn(current_turn)
+        rows = []
         if not owned:
-            self.last_pre_race_use_result = {"skip": "no_owned"}
-            return current, instant_used
-
+            return rows
         targets = []
-        SUMMER_CAMP_2_START = 60
-        CLIMAX_RACE_TURNS = [74, 76, 78]
+        for name in INSTANT_USE_ITEMS:
+            qty = owned.get(name, 0)
+            if qty <= 0:
+                continue
+            if name == "Grilled Carrots":
+                non_rainbow_count = 0
+                for row in chara.get("evaluation_info_array") or []:
+                    if int(row.get("target_id") or 0) in {1, 2, 3, 4, 5, 6} and int(row.get("evaluation") or 0) < 80:
+                        non_rainbow_count += 1
+                if non_rainbow_count == 0:
+                    continue
+            if name in ONE_TIME_BUFF_ITEMS:
+                if name in self.used_buffs:
+                    continue
+                targets.append((name, 1))
+            else:
+                targets.append((name, qty))
 
-        vital = int(chara.get("vital") or 0)
-        if owned.get("Energy Drink MAX", 0) > 0 and vital <= 1:
-            targets.append(("Energy Drink MAX", 1))
+        targets.extend(self._energy_targets(chara, owned, preset, best_command))
+        targets.extend(self._ailment_cure_targets(data, owned))
+        mood_target = self._mood_target(chara, owned)
+        if mood_target:
+            targets.append(mood_target)
 
-        cleat_choice = self._old_ui_cleat_before_race(owned, turn, program_id, race_planner, preset)
-        is_climax_race = turn in CLIMAX_RACE_TURNS
-        is_g1 = self._is_g1_program(program_id, race_planner)
-        use_gear = cleat_choice is not None or is_climax_race or is_g1 or turn > SUMMER_CAMP_2_START
-        if use_gear and owned.get("Glow Sticks", 0) > 0:
-            targets.append(("Glow Sticks", 1))
-        if cleat_choice:
-            targets.append((cleat_choice, 1))
+        whistle = self._whistle_target(best_command, owned, preset, None, current_turn)
+        if whistle:
+            targets = [whistle]
+        else:
+            charm = self._charm_target(best_command, owned, preset, None)
+            if charm:
+                targets.append(charm)
+            mega = self._megaphone_target(state, best_command, owned, preset, None, current_turn, None)
+            if mega:
+                targets.append(mega)
+            anklet = self._anklet_target(state, best_command, owned, preset)
+            if anklet:
+                targets.append(anklet)
+
+        if program_id:
+            cleat_choice = self._old_ui_cleat_before_race(owned, current_turn, program_id, None, preset)
+            if cleat_choice:
+                targets.append((cleat_choice, 1))
 
         targets = self._merge_targets(targets, owned)
-        self.last_pre_race_use_selected = [{"name": name, "item_id": DISPLAY_TO_ID.get(name), "use_num": count} for name, count in targets]
-        if not targets:
-            self.last_pre_race_use_result = {"skip": "no_targets"}
-            return current, instant_used
-
-        use_payload = []
-        for name, count in targets:
+        suggested = {name for name, _ in targets}
+        for name, count in sorted(owned.items()):
             item_id = DISPLAY_TO_ID.get(name)
-            if not item_id or item_id in self.failed_use_this_turn:
+            if not item_id or count <= 0:
                 continue
-            item_count = int(owned.get(name) or 0)
-            if item_count <= 0:
+            rows.append({
+                "name": name,
+                "item_id": item_id,
+                "current_num": int(count),
+                "suggested": name in suggested,
+                "reason": "suggested by rules" if name in suggested else None,
+            })
+        rows.sort(key=lambda r: (not r["suggested"], r["name"]))
+        return rows
+
+    def execute_use(self, client, state, payloads, current_turn):
+        """Explicit item use for exactly the selected payloads
+        [{item_id, use_num, current_num}]. Preflights owned quantities and
+        calls multi_item_use once. Returns (state, count, result_dict)."""
+        self.recover_after_use_error = False
+        data = state.get("data") or {}
+        free = data.get("free_data_set") or {}
+        owned = self._owned_map(free)
+        payload = []
+        for item in payloads or []:
+            item_id = int(item.get("item_id") or 0)
+            name = ITEM_NAMES.get(item_id)
+            if not name or item_id in self.failed_use_this_turn:
                 continue
-            use_payload.append({"item_id": item_id, "use_num": min(count, item_count), "current_num": item_count})
+            have = int(owned.get(name) or 0)
+            use_num = min(max(1, int(item.get("use_num") or 1)), have)
+            if have <= 0:
+                continue
+            payload.append({"item_id": item_id, "use_num": use_num, "current_num": have})
+        if not payload:
+            self.last_use_result = {"skip": "empty_payload"}
+            return state, 0, self.last_use_result
+        self.last_use_attempt = list(payload)
+        try:
+            res = client.use_items(payload, current_turn)
+            self.failed_use_this_turn = set()
+            self.last_use_result = {"result": "ok", "turn": current_turn, "payload": payload}
+            return self._merge_state(state, res), len(payload), self.last_use_result
+        except Exception as exc:
+            print(f"Item Use Error at turn {current_turn}: {exc}")
+            if any(code in str(exc) for code in ("201", "205", "208")):
+                self.recover_after_use_error = True
+                for item in payload:
+                    self.failed_use_this_turn.add(int(item.get("item_id") or 0))
+            self.last_use_result = {"result": "failed", "turn": current_turn, "error": str(exc), "payload": payload}
+            return state, 0, self.last_use_result
 
-        if use_payload:
-            self.last_pre_race_use_attempt = list(use_payload)
-            event = {
-                "turn": turn,
-                "selected": list(self.last_pre_race_use_selected),
-                "attempt": list(use_payload),
-                "payload": list(use_payload),
-                "result": {},
-            }
-            self.use_attempt_events.append(event)
-            try:
-                self.last_pre_race_use_result = client.use_items(use_payload, turn)
-                current = self._merge_state(current, self.last_pre_race_use_result)
-                self.last_pre_race_use_result = {"result": "ok", "turn": turn, "payload": use_payload}
-                event["result"] = self.last_pre_race_use_result
-                return current, instant_used + len(use_payload)
-            except Exception as exc:
-                print(f"Pre-Race Item Use Error at turn {turn}: {exc}")
-                if "205" in str(exc):
-                    for item in use_payload:
-                        self.failed_use_this_turn.add(item["item_id"])
-                self.last_pre_race_use_result = {"result": "failed", "turn": turn, "error": str(exc), "payload": use_payload}
-                event["result"] = self.last_pre_race_use_result
-                return current, instant_used
-
-        return current, instant_used
-
-    def buy_shop_items(self, client, state, preset, race_planner=None):
+    def preview_shop(self, state, preset, race_planner=None):
+        """Legal shop rows with a `recommended` flag from the migrated MANT
+        purchase rules. Pure — never mutates game state."""
         data = state.get("data") or {}
         free = data.get("free_data_set") or {}
         chara = data.get("chara_info") or {}
@@ -397,10 +417,7 @@ class MantItemManager:
         self.buy_attempt_events = []
         if not pickups:
             self.last_buy_result = {"skip": "no_pickups", "mant_coin": budget}
-            return state, 0
-        if budget <= 0:
-            self.last_buy_result = {"skip": "no_mant_coin", "mant_coin": budget}
-            return state, 0
+            return []
 
         owned = self._owned_map(free)
         any_sale = any(int(row.get("coin_num") or 0) < int(row.get("original_coin_num") or 0) for row in pickups if int(row.get("original_coin_num") or 0) > 0)
@@ -453,13 +470,14 @@ class MantItemManager:
                 "limit_turn": limit_turn,
                 "turns_left": (limit_turn - current_turn) if limit_turn > 0 else None,
                 "skip_reason": skip_reason,
+                "recommended": False,
             })
             if not skip_reason:
                 available.append((name, row))
 
         if not available:
             self.last_buy_result = {"skip": "no_available", "mant_coin": budget}
-            return state, 0
+            return self.last_buy_options
 
         effective_rows = []
         for name, row in available:
@@ -526,28 +544,16 @@ class MantItemManager:
 
         if not targets:
             self.last_buy_result = {"skip": "no_targets", "mant_coin": budget, "start_mant_coin": start_budget}
-            return state, 0
 
-        self.last_buy_selected = [{
-            "name": ITEM_NAMES.get(int(row.get("item_id") or 0), ""),
-            "item_id": int(row.get("item_id") or 0),
-            "shop_item_id": int(row.get("shop_item_id") or 0),
-            "cost": int(row.get("coin_num") or SHOP_ITEM_COSTS.get(ITEM_NAMES.get(int(row.get("item_id") or 0), ""), 9999)),
-            "current_num": int(row.get("item_buy_num") or 0),
-            "limit_turn": int(row.get("limit_turn") or 0),
-        } for row in targets]
-
-        payload = []
-        for row in targets:
-            sid = int(row.get("shop_item_id") or 0)
-            if sid > 0 and sid not in self.failed_exchange_this_snapshot:
-                payload.append({"shop_item_id": sid, "current_num": 0})
-
-        if not payload:
-            self.last_buy_result = {"skip": "empty_payload", "mant_coin": budget, "start_mant_coin": start_budget}
-            return state, 0
-
-        return self._exchange_batch(client, state, payload, current_turn)
+        target_shop_ids = {int(row.get("shop_item_id") or 0) for row in targets}
+        for entry in self.last_buy_options:
+            if entry.get("skip_reason") is None and int(entry.get("cost") or 0) > start_budget:
+                entry["skip_reason"] = "unaffordable"
+            entry["recommended"] = (
+                int(entry.get("shop_item_id") or 0) in target_shop_ids
+                and entry.get("skip_reason") is None
+            )
+        return self.last_buy_options
 
     def _exchange_batch(self, client, state, payload, current_turn):
         if not payload:

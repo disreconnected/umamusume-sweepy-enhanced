@@ -10,21 +10,25 @@ const state = {
     umaMoeCharas: null,
     presets: [],
     selectedPreset: "",
-    runnerTimer: 0,
     isSavingPreset: false,
     raceData: [],
     selectedRaces: [],
     scenarioType: "Mant",
-    burnClocks: false,
     umaMoeSearchResults: [],
     umaMoeSearchTotal: 0,
     umaMoeSearchCharaName: "",
     umaMoeSortKey: "score",
     umaMoeSortDir: "desc",
-    displayedClocksUsed: 0,
-    devEnabled: false,
-    consecutiveRunnerFails: 0,
     lastSessionCache: null,
+    playScenarios: [],
+    play: {
+        state: null,
+        revision: -1,
+        busy: false,
+        skillsOpen: false,
+        selectedSkillIds: [],
+        lastError: '',
+    },
     isRefillingTp: false,
     deckEditor: { open: false, id: "", name: "", cards: [], inspectCard: null },
     eventBoost: { enabled: false, story_event_id: 0, tp_multiplier: 2 },
@@ -64,11 +68,6 @@ const els = {
     brandMark: document.querySelector('.title span'),
     loginBtn: document.getElementById('login-btn'),
     logoutBtn: document.getElementById('logout-btn'),
-    turnDelayMin: document.getElementById('turn-delay-min'),
-    turnDelayMax: document.getElementById('turn-delay-max'),
-    temptFateBtn: document.getElementById('tempt-fate-btn'),
-    burnClocksBtn: document.getElementById('burn-clocks-btn'),
-    devBtn: document.getElementById('dev-career-btn'),
     loginView: document.getElementById('login-view'),
     lastSessionBanner: document.getElementById('last-session-banner'),
     dashboardView: document.getElementById('dashboard-view'),
@@ -192,37 +191,32 @@ const els = {
     skillTiersContainer: document.getElementById('skill-tiers-container'),
     skillBlacklistContainer: document.getElementById('skill-blacklist-container'),
     skillAddTierBtn: document.getElementById('skill-add-tier-btn'),
-    skillModalClose: document.getElementById('skill-modal-close')
+    skillModalClose: document.getElementById('skill-modal-close'),
+    playerPanel: document.getElementById('player-panel'),
+    playerSummary: document.getElementById('player-summary'),
+    playerRecommendation: document.getElementById('player-recommendation'),
+    playerActions: document.getElementById('player-actions'),
+    playerSkills: document.getElementById('player-skills'),
+    playerScenario: document.getElementById('player-scenario'),
+    playerStatus: document.getElementById('player-status'),
+    playerSkillBtn: document.getElementById('player-skill-btn'),
+    playerSkillPanel: document.getElementById('player-skill-panel'),
+    playerSkillList: document.getElementById('player-skill-list'),
+    playerSkillBuy: document.getElementById('player-skill-buy'),
+    playerSkillCost: document.getElementById('player-skill-cost'),
+    playerFinishBtn: document.getElementById('player-finish-btn'),
+    playerDeleteBtn: document.getElementById('player-delete-btn'),
+    playerRefreshBtn: document.getElementById('player-refresh-btn'),
+    scenarioPicker: document.getElementById('scenario-picker')
 };
-        const delaySettingsStorageKey = 'uma_turn_delay_settings';
-        const burnClocksStorageKey = 'uma_burn_clocks';
-        const devStorageKey = 'uma_dev_career';
-        function syncDevControls() {
-            if (!els.devBtn) return;
-            els.devBtn.classList.toggle('is-active', state.devEnabled);
-            els.devBtn.innerText = `DEV: ${state.devEnabled ? 'ON' : 'OFF'}`;
-        }
-        function setDevEnabled(value, options = {}) {
-            state.devEnabled = Boolean(value);
-            syncDevControls();
-            if (options.persist) {
-                localStorage.setItem(devStorageKey, String(state.devEnabled));
-            }
-        }
-
-        window.addEventListener('storage', event => {
-            if (event.key === devStorageKey && event.newValue !== null) {
-                setDevEnabled(event.newValue === 'true', { persist: false });
-            }
-        });
-        const storedDev = localStorage.getItem(devStorageKey);
-        if (storedDev !== null) setDevEnabled(storedDev === 'true', { persist: false });
-
-        if (els.devBtn) {
-            els.devBtn.addEventListener('click', () => {
-                setDevEnabled(!state.devEnabled, { persist: true });
-            });
-        }
+        // Legacy autoplay/dev toggles removed: manual play is the only mode.
+        // Clear any stale localStorage flags from previous versions.
+        try {
+            localStorage.removeItem('uma_dev_career');
+            localStorage.removeItem('uma_burn_clocks');
+            localStorage.removeItem('uma_turn_delay_settings');
+            localStorage.removeItem('saved_password');
+        } catch (e) {}
 
         function setLoadingScreen(visible) {
             if (!els.loadingScreen) return;
@@ -423,26 +417,17 @@ const els = {
             return nextTheme;
         };
         applyTheme(localStorage.getItem('theme'));
+        // Steam password is never persisted (saved_password was removed);
+        // only username/proxy hints survive across restarts.
         const savedUsername = localStorage.getItem('saved_username');
-        const savedPassword = localStorage.getItem('saved_password');
         const savedProxyUrl = localStorage.getItem('saved_proxy_url');
         if (savedUsername) document.getElementById('username').value = savedUsername;
-        if (savedPassword) document.getElementById('password').value = savedPassword;
         if (savedProxyUrl && document.getElementById('proxy-url')) document.getElementById('proxy-url').value = savedProxyUrl;
-        let themeToggleClicks = 0;
         els.themeToggle.addEventListener('click', () => {
             const nextTheme = document.body.classList.contains('theme-blue') ? 'pink' : 'blue';
             applyTheme(nextTheme);
             localStorage.setItem('theme', nextTheme);
-            themeToggleClicks++;
-            if (themeToggleClicks >= 11 && els.devBtn) {
-                els.devBtn.style.display = 'inline-block';
-            }
         });
-        window.iwillnotabusethis = function() {
-            if (els.devBtn) els.devBtn.style.display = 'inline-block';
-            setDevEnabled(true, { persist: true });
-        };
         const sleep = ms => new Promise(resolve => window.setTimeout(resolve, ms));
         const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
         async function waitForDomPaint(frames = 2) {
@@ -526,19 +511,6 @@ const els = {
             });
             loadMasterDataStatus();
         }
-        function writeLocalSetting(key, value) {
-            try {
-                localStorage.setItem(key, JSON.stringify(value));
-            } catch (e) {}
-        }
-        function readLocalSetting(value, fallback = null) {
-            if (!value) return fallback;
-            try {
-                return JSON.parse(value);
-            } catch (e) {
-                return fallback;
-            }
-        }
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, char => ({
                 '&': '&amp;',
@@ -551,76 +523,6 @@ const els = {
         function escapeAttr(value) {
             return escapeHtml(value);
         }
-        function normalizeDelayBounds(min, max, disabled = false, restoreMin = null, restoreMax = null) {
-            const fallbackMin = Number.isFinite(Number(restoreMin)) ? Number(restoreMin) : 1.6;
-            const fallbackMax = Number.isFinite(Number(restoreMax)) ? Number(restoreMax) : 3.7;
-            if (disabled) return { min: 0, max: 0, restoreMin: fallbackMin, restoreMax: fallbackMax, disabled: true };
-            const left = Math.max(0, Number.isFinite(Number(min)) ? Number(min) : fallbackMin);
-            let right = Math.max(0, Number.isFinite(Number(max)) ? Number(max) : fallbackMax);
-            if (left > right) right = left;
-            return { min: left, max: right, restoreMin: left, restoreMax: right, disabled: false };
-        }
-        function setDelayControls(settings) {
-            if (!els.turnDelayMin || !els.turnDelayMax || !els.temptFateBtn) return;
-            const disabled = Boolean(settings.disabled);
-            const restoreMin = Number.isFinite(Number(settings.restoreMin)) ? Number(settings.restoreMin) : Number(settings.restore_min);
-            const restoreMax = Number.isFinite(Number(settings.restoreMax)) ? Number(settings.restoreMax) : Number(settings.restore_max);
-            els.turnDelayMin.value = String(settings.min);
-            els.turnDelayMax.value = String(settings.max);
-            els.turnDelayMin.dataset.restoreValue = String(Number.isFinite(restoreMin) ? restoreMin : settings.min);
-            els.turnDelayMax.dataset.restoreValue = String(Number.isFinite(restoreMax) ? restoreMax : settings.max);
-            els.turnDelayMin.disabled = disabled;
-            els.turnDelayMax.disabled = disabled;
-            els.temptFateBtn.classList.toggle('is-active', disabled);
-            els.temptFateBtn.innerText = disabled ? 'FATE TEMPTED' : 'TEMPT FATE';
-        }
-        async function saveDelaySettings(settings) {
-            setDelayControls(settings);
-            const data = await apiJson('/api/settings/turn-delay', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(settings)
-            });
-            const normalized = normalizeDelayBounds(data.min, data.max, data.disabled, data.restore_min, data.restore_max);
-            setDelayControls(normalized);
-            writeLocalSetting(delaySettingsStorageKey, normalized);
-        }
-        async function loadDelaySettings() {
-            if (!els.turnDelayMin || !els.turnDelayMax || !els.temptFateBtn) return;
-            try {
-                const data = await apiJson('/api/settings/turn-delay');
-                setDelayControls(normalizeDelayBounds(data.min, data.max, data.disabled, data.restore_min, data.restore_max));
-            } catch (e) {
-                setDelayControls({ min: 1.6, max: 3.7, restoreMin: 1.6, restoreMax: 3.7, disabled: false });
-            }
-        }
-        function bindDelayControls() {
-            if (!els.turnDelayMin || !els.turnDelayMax || !els.temptFateBtn) return;
-            const sync = () => {
-                saveDelaySettings(normalizeDelayBounds(els.turnDelayMin.value, els.turnDelayMax.value, false));
-            };
-            els.turnDelayMin.addEventListener('input', sync);
-            els.turnDelayMax.addEventListener('input', sync);
-            els.temptFateBtn.addEventListener('click', () => {
-                const active = els.temptFateBtn.classList.contains('is-active');
-                const restoreMin = Number(els.turnDelayMin.dataset.restoreValue || 1.6);
-                const restoreMax = Number(els.turnDelayMax.dataset.restoreValue || 3.7);
-                saveDelaySettings(active
-                    ? normalizeDelayBounds(restoreMin, restoreMax, false)
-                    : normalizeDelayBounds(0, 0, true, restoreMin, restoreMax)
-                );
-            });
-            loadDelaySettings();
-        }
-        window.addEventListener('storage', event => {
-            if (event.key !== delaySettingsStorageKey || !event.newValue) return;
-            const settings = readLocalSetting(event.newValue);
-            if (settings) setDelayControls(normalizeDelayBounds(settings.min, settings.max, settings.disabled, settings.restoreMin, settings.restoreMax));
-        });
-        window.addEventListener('storage', event => {
-            if (event.key !== burnClocksStorageKey || !event.newValue) return;
-            setBurnClocks(readLocalSetting(event.newValue, false));
-        });
         function resetLoginState() {
             state.isLoading = false;
             els.loginBtn.innerText = state.needs2fa ? 'VALIDATE' : 'LOGIN';
@@ -679,7 +581,7 @@ const els = {
                     showTwoFactorPrompt();
                 } else if (data.success) {
                     localStorage.setItem('saved_username', payload.username);
-                    localStorage.setItem('saved_password', payload.password);
+                    localStorage.removeItem('saved_password');
                     localStorage.setItem('saved_proxy_url', payload.proxy_url);
                     try {
                         await apiJson('/api/session-cache', {
@@ -687,7 +589,6 @@ const els = {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 steam_username: payload.username,
-                                steam_password: payload.password,
                                 proxy_url: payload.proxy_url
                             })
                         });
@@ -758,6 +659,9 @@ const els = {
         async function deleteCareer() {
             const career = state.account && state.account.career;
             if (!career || !career.active || state.isDeletingCareer || state.isFinishingCareer) return;
+            const sp = state.play && state.play.state ? Number(state.play.state.skill_points || 0) : 0;
+            const turn = state.play && state.play.state ? Number(state.play.state.turn || 0) : Number(career.turn || 0);
+            if (!window.confirm(`Force-delete the active career (turn ${turn})? The trained character is NOT saved${sp ? ` and ${sp} SP is lost` : ''}.`)) return;
             state.isDeletingCareer = true;
             lockCareerModalButtons();
             els.careerDeleteBtn.innerText = 'DELETING';
@@ -766,11 +670,16 @@ const els = {
                 const data = await apiJson('/api/career/delete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ current_turn: career.turn || 0 })
+                    body: JSON.stringify({ current_turn: turn, expected_revision: currentPlayRevision() })
                 });
-                if (!data.success) throw new Error(data.detail || 'Delete failed');
-                renderAccountStrip(data.account);
+                if (!data.success) {
+                    if (data.state) applyPlayState(data.state);
+                    throw new Error(data.detail || data.error || 'Delete failed');
+                }
+                if (data.state) applyPlayState(data.state);
                 closeCareerModal();
+                hidePlayerPanel();
+                renderAccountStrip(state.account);
             } catch (e) {
                 setCareerModalCopy(escapeHtml(e.message || 'Delete failed'));
                 els.careerDeleteBtn.innerText = 'RETRY';
@@ -782,27 +691,28 @@ const els = {
         async function finishCareer() {
             const career = state.account && state.account.career;
             if (!career || !career.active || state.isFinishingCareer || state.isDeletingCareer) return;
+            const ps = state.play && state.play.state || {};
+            const sp = Number(ps.skill_points || 0);
+            const turn = Number(ps.turn || career.turn || 0);
+            if (!window.confirm(`Finish and save this career at turn ${turn}? ${sp > 0 ? `Unspent SP: ${sp} (spend it in the skills drawer first if you want it used). ` : ''}This ends the career.`)) return;
             state.isFinishingCareer = true;
             lockCareerModalButtons();
             els.careerFinishBtn.innerText = 'FINISHING';
-            setCareerModalCopy('Buying remaining skills and saving the trained character...');
+            setCareerModalCopy('Saving the trained character...');
             try {
                 const data = await apiJson('/api/career/finish', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        current_turn: career.turn || 0,
-                        preset_name: state.selectedPreset || '',
-                        buy_skills: true,
-                    })
+                    body: JSON.stringify({ current_turn: turn, expected_revision: currentPlayRevision() })
                 });
-                if (!data.success) throw new Error(data.detail || 'Finish failed');
-                renderAccountStrip(data.account);
-                const skills = Number(data.skills_bought || 0);
-                const before = Number(data.sp_before || 0);
-                const after = Number(data.sp_after || 0);
-                setCareerModalCopy(`Career saved. Skills bought: <strong>${skills}</strong> · SP spent: <strong>${Math.max(0, before - after)}</strong> (was ${before}, now ${after}).`);
-                setTimeout(closeCareerModal, 1800);
+                if (!data.success) {
+                    if (data.state) applyPlayState(data.state);
+                    throw new Error(data.detail || data.error || 'Finish failed');
+                }
+                if (data.state) applyPlayState(data.state);
+                closeCareerModal();
+                hidePlayerPanel();
+                renderAccountStrip(state.account);
             } catch (e) {
                 setCareerModalCopy(escapeHtml(e.message || 'Finish failed'));
                 els.careerFinishBtn.innerText = 'RETRY';
@@ -817,33 +727,6 @@ const els = {
         els.careerModal.addEventListener('click', event => {
             if (event.target === els.careerModal) closeCareerModal();
         });
-        function syncBurnClocksControls() {
-            if (!els.burnClocksBtn) return;
-            const clocks = state.account ? Number(state.account.clocks || 0) : 0;
-            const disabled = clocks <= 11;
-
-            if (disabled) {
-                state.burnClocks = false;
-                els.burnClocksBtn.disabled = true;
-                els.burnClocksBtn.classList.remove('is-active');
-                els.burnClocksBtn.innerText = `BURN CLOCKS: LOW (${clocks})`;
-            } else {
-                els.burnClocksBtn.disabled = false;
-                els.burnClocksBtn.classList.toggle('is-active', state.burnClocks);
-                els.burnClocksBtn.innerText = `BURN CLOCKS: ${state.burnClocks ? 'ON' : 'OFF'}`;
-            }
-        }
-        function setBurnClocks(value, options = {}) {
-            state.burnClocks = Boolean(value);
-            syncBurnClocksControls();
-            if (options.persist) writeLocalSetting(burnClocksStorageKey, state.burnClocks);
-        }
-        function loadStoredBurnClocks() {
-            if (state.runner && state.runner.running) return;
-            const stored = readLocalSetting(localStorage.getItem(burnClocksStorageKey));
-            if (stored !== null) setBurnClocks(stored);
-        }
-
         function renderAccountStrip(account) {
             state.account = account || null;
             if (!account) {
@@ -889,13 +772,14 @@ const els = {
             if (careerPill) careerPill.addEventListener('click', openCareerModal);
             const tpRefillBtn = document.getElementById('tp-refill-btn');
             if (tpRefillBtn) tpRefillBtn.addEventListener('click', refillTp);
-            loadStoredBurnClocks();
-            syncBurnClocksControls();
         }
 
         async function refillTp(event) {
             if (event) event.stopPropagation();
             if (state.isRefillingTp) return;
+            const tp = state.account && state.account.tp || {};
+            const cost = Math.max(0, Math.ceil((Number(tp.max || 0) - Number(tp.current || 0)) / 30));
+            if (!window.confirm(`Refill TP to max (${Number(tp.current || 0)}/${Number(tp.max || 0)})? This spends ${cost} refill${cost === 1 ? '' : 's'} of jewels/carrots.`)) return;
             state.isRefillingTp = true;
             renderAccountStrip(state.account);
             try {
@@ -917,26 +801,6 @@ const els = {
                 renderAccountStrip(state.account);
             }
         }
-
-        els.burnClocksBtn.addEventListener('click', async () => {
-            setBurnClocks(!state.burnClocks, { persist: true });
-            if (state.runner && state.runner.running) {
-                try {
-                    const data = await apiJson('/api/career/runner/burn_clocks', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ burn_clocks: state.burnClocks })
-                    });
-                    if (!data.success) throw new Error(data.detail || 'Failed to update burn_clocks');
-                    if (data.runner) applyRunnerSnapshot(data.runner);
-                } catch (e) {
-                    console.error("Failed to update burn_clocks mid-run", e);
-                    if (state.runner && state.runner.burn_clocks !== undefined) {
-                        setBurnClocks(state.runner.burn_clocks, { persist: true });
-                    }
-                }
-            }
-        });
 
         // ---- Event Boost (TP Usage x2) -------------------------------------------------
         // Mirrors the in-game "Event Boost" checkbox. When enabled, the career start
@@ -1124,7 +988,7 @@ const els = {
             const parentError = getParentSelectionError();
             if (parentError) return parentError;
             const tp = state.account && state.account.tp ? Number(state.account.tp.current || 0) : 0;
-            if (state.account && tp < 30 && !state.devEnabled) return `Not enough TP: ${tp}/30`;
+            if (state.account && tp < 30) return `Not enough TP: ${tp}/30`;
             return '';
         }
         function getParentLineageCards(parent) {
@@ -1145,12 +1009,12 @@ const els = {
             const reason = getStartMissingReason();
             els.startCareerBtn.disabled = Boolean(reason) || state.isStartingCareer;
             if (state.isStartingCareer) {
-                els.startCareerBtn.innerText = 'RUNNING...';
-                els.startStatus.innerText = 'Starting runner...';
+                els.startCareerBtn.innerText = 'WORKING...';
+                els.startStatus.innerText = 'Starting career...';
                 els.startStatus.classList.remove('error');
             } else {
                 const activeCareer = state.account && state.account.career && state.account.career.active;
-                els.startCareerBtn.innerText = activeCareer ? 'RESUME CAREER' : 'RUN CAREER';
+                els.startCareerBtn.innerText = activeCareer ? 'PLAY CAREER' : 'START CAREER';
                 els.startStatus.innerText = reason;
                 els.startStatus.classList.toggle('error', false);
             }
@@ -3195,257 +3059,61 @@ const els = {
             let finalMessage = '';
             let finalIsError = false;
             const activeCareer = state.account && state.account.career && state.account.career.active;
-            const rentalParent = selection.rentalParent || null;
-            const boost = resolveEventBoostForStart();
-            const body = activeCareer ? {
-                preset_name: state.selectedPreset,
-                max_steps: 2500,
-                burn_clocks: state.burnClocks,
-                dev_mode: state.devEnabled
-            } : {
-                card_id: Number(selection.trainee.id),
-                support_card_ids: selection.deck.cards.map(card => Number(card.id)),
-                friend_viewer_id: Number(selection.friend.viewer_id),
-                friend_card_id: Number(selection.friend.support_card_id),
-                parent_id_1: Number(selection.veterans[0].instance_id),
-                parent_id_2: selection.veterans[1] ? Number(selection.veterans[1].instance_id) : (rentalParent ? Number(rentalParent.trained_chara_id) : 0),
-                rental_viewer_id: rentalParent ? Number(rentalParent.viewer_id) : 0,
-                rental_chara_id: rentalParent ? Number(rentalParent.trained_chara_id) : 0,
-                deck_id: Number(selection.deck.deck_id || selection.deck.id) || 1,
-                scenario_id: 4,
-                use_tp: boost.useTp,
-                difficulty_id: 0,
-                difficulty: 0,
-                is_boost: boost.isBoost,
-                boost_story_event_id: boost.storyEventId,
-                preset_name: state.selectedPreset,
-                max_steps: 2500,
-                burn_clocks: state.burnClocks,
-                dev_mode: state.devEnabled
-            };
-            try {
-                const data = await apiJson('/api/career/run', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-                if (!data.success) throw new Error(data.detail || 'Start failed');
-                state.displayedClocksUsed = Number(data.runner && data.runner.clocks_used || 0);
-                renderAccountStrip(data.account);
-                if (data.account && data.account.career && data.account.career.active) {
-                    autoLoadCareerSelection();
-                    renderFriends();
+            if (activeCareer) {
+                // Resumed career: the state endpoint replaces the removed runner route.
+                try {
+                    const data = await apiJson('/api/play/state');
+                    if (!data.success) throw new Error(data.detail || 'State load failed');
+                    applyPlayState(data.state);
+                    showPlayerPanel();
+                    finalMessage = `Resumed turn ${Number(data.state && data.state.turn || 0)}`;
+                } catch (e) {
+                    finalMessage = e.message || 'State load failed';
+                    finalIsError = true;
                 }
-                startRunnerPolling();
-                const advisor = data.runtime_advisor || {};
-                const archetype = advisor.deck_archetype ? ` (${advisor.deck_archetype})` : '';
-                finalMessage = `Career runner started${archetype}`;
-            } catch (e) {
-                finalMessage = e.message || 'Start failed';
-                finalIsError = true;
-                if (state.devEnabled) {
-                    setDevEnabled(false, { persist: true });
-                }
-            } finally {
-                state.isStartingCareer = false;
-                syncStartButton();
-                if (finalMessage) {
-                    els.startStatus.innerText = finalMessage;
-                    els.startStatus.classList.toggle('error', finalIsError);
-                }
-            }
-        }
-        function applyRunnerSettings(runner) {
-            if (runner.running && runner.burn_clocks !== undefined && state.burnClocks !== runner.burn_clocks) {
-                setBurnClocks(runner.burn_clocks, { persist: true });
-            }
-        }
-        function applyRunnerClockUsage(runner) {
-            const clocksUsed = Number(runner.clocks_used || 0);
-            if (state.account && clocksUsed > state.displayedClocksUsed) {
-                const delta = clocksUsed - state.displayedClocksUsed;
-                state.account = {
-                    ...state.account,
-                    clocks: Math.max(0, Number(state.account.clocks || 0) - delta)
+            } else {
+                const rentalParent = selection.rentalParent || null;
+                const boost = resolveEventBoostForStart();
+                const scenarioId = Number(els.scenarioPicker && els.scenarioPicker.value) || 4;
+                const body = {
+                    card_id: Number(selection.trainee.id),
+                    support_card_ids: selection.deck.cards.map(card => Number(card.id)),
+                    friend_viewer_id: Number(selection.friend.viewer_id),
+                    friend_card_id: Number(selection.friend.support_card_id),
+                    parent_id_1: Number(selection.veterans[0].instance_id),
+                    parent_id_2: selection.veterans[1] ? Number(selection.veterans[1].instance_id) : (rentalParent ? Number(rentalParent.trained_chara_id) : 0),
+                    rental_viewer_id: rentalParent ? Number(rentalParent.viewer_id) : 0,
+                    rental_chara_id: rentalParent ? Number(rentalParent.trained_chara_id) : 0,
+                    deck_id: Number(selection.deck.deck_id || selection.deck.id) || 1,
+                    scenario_id: scenarioId,
+                    use_tp: boost.useTp,
+                    difficulty_id: 0,
+                    difficulty: 0,
+                    is_boost: boost.isBoost,
+                    boost_story_event_id: boost.storyEventId
                 };
-                state.displayedClocksUsed = clocksUsed;
-                renderAccountStrip(state.account);
-            } else if (clocksUsed < state.displayedClocksUsed) {
-                state.displayedClocksUsed = clocksUsed;
+                try {
+                    const data = await apiJson('/api/career/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    if (!data.success) throw new Error(data.detail || 'Start failed');
+                    if (data.state) applyPlayState(data.state);
+                    renderAccountStrip(data.account || state.account);
+                    showPlayerPanel();
+                    finalMessage = 'Career started — manual play';
+                } catch (e) {
+                    finalMessage = e.message || 'Start failed';
+                    finalIsError = true;
+                }
             }
-        }
-        function applyRunnerSnapshot(runner) {
-            state.runner = runner;
-            applyRunnerSettings(runner);
-            applyRunnerClockUsage(runner);
-        }
-        async function refreshRunnerStatus() {
-            try {
-                const data = await apiJson('/api/career/runner');
-                if (!data.success || !data.runner) return;
-                const runner = data.runner;
-                applyRunnerSnapshot(runner);
-
-                const rows = (runner.action_history && runner.action_history.length) ? runner.action_history : deriveActionHistory(runner.log || []);
-                if (rows.length) renderActionHistory(rows);
-                if (runner.running) {
-                    els.startStatus.classList.toggle('error', false);
-                    if (!rows.length) els.startStatus.innerText = `Turn ${runner.turn || '?'} / ${runner.last_action || 'running'} / ${runner.steps || 0}`;
-                    return;
-                }
-                if (state.runnerTimer && !state.devEnabled) {
-                    bgClearTimer(state.runnerTimer);
-                    state.runnerTimer = 0;
-                }
-                if (runner.last_error) {
-                    els.startStatus.classList.toggle('error', true);
-                    if (!rows.length) els.startStatus.innerText = runner.last_error;
-                    if (state.devEnabled) {
-                        state.consecutiveRunnerFails++;
-                        if (state.consecutiveRunnerFails >= 3) {
-                            if (!rows.length) els.startStatus.innerText = runner.last_error + " (Auto-retry disabled due to loop)";
-                            setDevEnabled(false, { persist: true });
-                        }
-                    }
-                } else if (state.devEnabled && runner.finished && !runner.last_error) {
-                    state.consecutiveRunnerFails = 0;
-                    els.startStatus.classList.toggle('error', false);
-                    if (!rows.length) els.startStatus.innerText = `Career finished! Restarting...`;
-                    if (state.account && state.account.career) state.account.career.active = false;
-                    renderAccountStrip(state.account);
-                } else if (runner.steps) {
-                    els.startStatus.classList.toggle('error', false);
-                    if (!rows.length) els.startStatus.innerText = `Runner stopped after ${runner.steps} steps`;
-                    if (state.devEnabled) {
-                        state.consecutiveRunnerFails++;
-                        if (state.consecutiveRunnerFails >= 3) {
-                            if (!rows.length) els.startStatus.innerText = `Runner stopped after ${runner.steps} steps (Auto-retry disabled due to loop)`;
-                            setDevEnabled(false, { persist: true });
-                        }
-                    }
-                }
-            } catch (e) {}
-        }
-        function renderActionHistory(rows) {
-            if (!els.startStatus) return;
-            if (!rows.length) {
-                els.startStatus.innerText = '';
-                return;
+            state.isStartingCareer = false;
+            syncStartButton();
+            if (finalMessage) {
+                els.startStatus.innerText = finalMessage;
+                els.startStatus.classList.toggle('error', finalIsError);
             }
-            const formatStatsDetail = row => {
-                const stats = row.stats || {};
-                if (!Object.keys(stats).length) return row.detail || '';
-                return [
-                    `HP ${stats.hp ?? 0}/${stats.max_hp ?? 100}`,
-                    `MOOD ${stats.motivation ?? 0}`,
-                    `SPD ${stats.speed ?? 0} STA ${stats.stamina ?? 0} PWR ${stats.power ?? 0} GUT ${stats.guts ?? 0} WIT ${stats.wit ?? 0} SP ${stats.skill_point ?? 0}`
-                ].join(' | ');
-            };
-            const body = rows.map(row => `
-                    <tr>
-                        <td>${escapeHtml(row.turn)}</td>
-                        <td><span class="action-pill action-pill-${escapeAttr(normalizeHistoryAction(row).action)}">${escapeHtml(normalizeHistoryAction(row).action)}</span></td>
-                        <td>${escapeHtml(row.facility)}</td>
-                        <td class="action-history-detail">${escapeHtml(formatStatsDetail(row))}</td>
-                    </tr>
-                `).join('');
-            els.startStatus.innerHTML = `
-                <div class="action-history-wrap">
-                    <table class="action-history-table">
-                        <thead>
-                            <tr>
-                                <th>TURN</th>
-                                <th>ACTION</th>
-                                <th>FACILITY</th>
-                                <th>DETAIL</th>
-                            </tr>
-                        </thead>
-                        <tbody>${body}</tbody>
-                    </table>
-                </div>
-            `;
-            const wrap = els.startStatus.querySelector('.action-history-wrap');
-            if (wrap) wrap.scrollTop = wrap.scrollHeight;
-        }
-        function deriveActionHistory(log) {
-            return log.filter(item => ['command', 'race', 'race_progress', 'finish', 'api_delay', 'turn_delay', 'complex_delay'].includes(item.action)).map(item => {
-                const detail = String(item.detail || '');
-                let action = item.action;
-                let facility = '';
-                if (action === 'command') {
-                    if (detail.startsWith('training ')) {
-                        action = 'train';
-                        facility = detail.replace('training ', '');
-                    } else if (detail.startsWith('rest ')) {
-                        action = 'rest';
-                        facility = detail.replace('rest ', '');
-                        if (['301', '302', '303', '304', '305', '390'].includes(facility)) action = 'recreation';
-                    } else if (detail.startsWith('challenge ')) {
-                        action = 'rest';
-                        facility = detail.replace('challenge ', '');
-                    } else if (detail.startsWith('recreation ')) {
-                        action = 'recreation';
-                        facility = detail.replace('recreation ', '');
-                    } else if (detail.startsWith('command 8:')) {
-                        action = 'medic';
-                    }
-                } else if (action === 'race_progress') {
-                    action = 'race';
-                }
-                return { turn: item.turn, action, facility, detail };
-            });
-        }
-        function normalizeHistoryAction(row) {
-            const facility = String(row.facility ?? '');
-            if (row.action === 'rest' && ['301', '302', '303', '304', '305', '390'].includes(facility)) {
-                return { ...row, action: 'recreation' };
-            }
-            return row;
-        }
-        const timerWorkerBlob = new Blob([`
-            let activeTimers = {};
-            self.onmessage = function(e) {
-                const { action, id, ms } = e.data;
-                if (action === 'setInterval') {
-                    activeTimers[id] = setInterval(() => postMessage({ id }), ms);
-                } else if (action === 'setTimeout') {
-                    activeTimers[id] = setTimeout(() => {
-                        postMessage({ id });
-                        delete activeTimers[id];
-                    }, ms);
-                } else if (action === 'clear') {
-                    clearInterval(activeTimers[id]);
-                    clearTimeout(activeTimers[id]);
-                    delete activeTimers[id];
-                }
-            };
-        `], {type: 'application/javascript'});
-        const timerWorker = new Worker(URL.createObjectURL(timerWorkerBlob));
-        let nextTimerId = 1;
-        const timerCallbacks = {};
-        timerWorker.onmessage = function(e) {
-            if (timerCallbacks[e.data.id]) timerCallbacks[e.data.id]();
-        };
-        function bgSetInterval(cb, ms) {
-            const id = nextTimerId++;
-            timerCallbacks[id] = cb;
-            timerWorker.postMessage({ action: 'setInterval', id, ms });
-            return id;
-        }
-        function bgSetTimeout(cb, ms) {
-            const id = nextTimerId++;
-            timerCallbacks[id] = () => { delete timerCallbacks[id]; cb(); };
-            timerWorker.postMessage({ action: 'setTimeout', id, ms });
-            return id;
-        }
-        function bgClearTimer(id) {
-            delete timerCallbacks[id];
-            timerWorker.postMessage({ action: 'clear', id });
-        }
-        function startRunnerPolling() {
-            if (state.runnerTimer) bgClearTimer(state.runnerTimer);
-            refreshRunnerStatus();
-            state.runnerTimer = bgSetInterval(refreshRunnerStatus, 1500);
         }
         els.friendRefreshBtn.addEventListener('click', event => {
             event.stopPropagation();
@@ -4313,8 +3981,19 @@ const els = {
             bindPresetHandlers();
             renderTeamPanel();
             updateAdvisorRecommendations();
+            await loadPlayScenarios();
 
-            startRunnerPolling();
+            // Manual play: an active career opens the compact player; normal
+            // play is request/response driven (no polling).
+            if (state.account && state.account.career && state.account.career.active) {
+                try {
+                    const playData = await apiJson('/api/play/state');
+                    if (playData.success && playData.state) {
+                        applyPlayState(playData.state);
+                        showPlayerPanel();
+                    }
+                } catch (e) {}
+            }
             await waitForDomPaint(2);
             setLoadingScreen(false);
             await waitForDomPaint(2);
@@ -4377,10 +4056,6 @@ const els = {
                         const uInput = document.getElementById('username');
                         if (uInput) uInput.value = state.lastSessionCache.steam_username;
                     }
-                    if (state.lastSessionCache.steam_password) {
-                        const pInput = document.getElementById('password');
-                        if (pInput) pInput.value = state.lastSessionCache.steam_password;
-                    }
                     if (state.lastSessionCache.proxy_url) {
                         const prxyInput = document.getElementById('proxy-url');
                         if (prxyInput) prxyInput.value = state.lastSessionCache.proxy_url;
@@ -4419,7 +4094,351 @@ const els = {
                 renderLastSessionBanner(state.lastSessionCache);
             }
         }
-        bindDelayControls();
+        // ---- Compact manual player ---------------------------------------------------
+        async function loadPlayScenarios() {
+            try {
+                const data = await apiJson('/api/play/scenarios');
+                if (!data.success) return;
+                state.playScenarios = data.scenarios || [];
+                if (els.scenarioPicker && state.playScenarios.length) {
+                    const current = Number(els.scenarioPicker.value) || 0;
+                    els.scenarioPicker.innerHTML = state.playScenarios.map(s =>
+                        `<option value="${s.id}">${escapeHtml(s.name)}</option>`
+                    ).join('');
+                    if (!current || !state.playScenarios.some(s => Number(s.id) === current)) {
+                        const preset = getCurrentPreset();
+                        const presetId = Number((preset && preset.scenario_id) || (preset && preset.scenario) || 0);
+                        els.scenarioPicker.value = String(state.playScenarios.some(s => Number(s.id) === presetId) ? presetId : (state.playScenarios[0] ? state.playScenarios[0].id : 4));
+                    } else {
+                        els.scenarioPicker.value = String(current);
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function currentPlayRevision() {
+            return Number(state.play && state.play.state && state.play.state.revision !== undefined ? state.play.state.revision : state.play.revision);
+        }
+
+        function applyPlayState(playState) {
+            if (!playState) return;
+            state.play.state = playState;
+            state.play.revision = Number(playState.revision !== undefined ? playState.revision : state.play.revision);
+            state.play.selectedSkillIds = state.play.selectedSkillIds.filter(id => (playState.skills && playState.skills.options || []).some(o => o.skill_id === Number(String(id).split(':')[1])));
+        }
+
+        function showPlayerPanel() {
+            if (!els.playerPanel) return;
+            els.playerPanel.style.display = 'block';
+            els.playerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            renderPlayState();
+        }
+
+        function hidePlayerPanel() {
+            state.play.state = null;
+            if (els.playerPanel) els.playerPanel.style.display = 'none';
+            if (els.playerSkillPanel) els.playerSkillPanel.style.display = 'none';
+        }
+
+        function setPlayBusy(busy) {
+            state.play.busy = Boolean(busy);
+            if (!els.playerActions) return;
+            els.playerActions.querySelectorAll('button[data-action-id]').forEach(btn => {
+                btn.disabled = busy;
+            });
+            if (els.playerSkillBtn) els.playerSkillBtn.disabled = busy;
+            if (els.playerFinishBtn) els.playerFinishBtn.disabled = busy;
+            if (els.playerDeleteBtn) els.playerDeleteBtn.disabled = busy;
+            if (els.playerRefreshBtn) els.playerRefreshBtn.disabled = busy;
+        }
+
+        function statLabel(key) {
+            return { speed: 'SPD', stamina: 'STA', power: 'PWR', guts: 'GUT', wit: 'WIT' }[key] || key;
+        }
+
+        function renderPlayState() {
+            const ps = state.play.state;
+            if (!ps) return;
+            setPlayBusy(false);
+            const scenario = ps.scenario || {};
+            const stats = ps.stats || {};
+            const energy = ps.energy || {};
+            const conditions = (ps.conditions || []).map(c => escapeHtml(String(c))).join(', ') || '—';
+
+            if (els.playerSummary) {
+                els.playerSummary.innerHTML = `
+                    <div class="play-summary-row">
+                        <span class="play-summary-scenario">${escapeHtml(scenario.name || '?')} <em>#${escapeHtml(String(scenario.id || '?'))}</em></span>
+                        <span class="play-summary-phase play-phase-${escapeAttr(ps.phase || 'home')}">${escapeHtml((ps.phase || 'home').toUpperCase())}</span>
+                        <span class="play-summary-turn">TURN ${Number(ps.turn || 0)}</span>
+                    </div>
+                    <div class="play-summary-row play-summary-stats">
+                        ${['speed', 'stamina', 'power', 'guts', 'wit'].map(k => `<span class="play-stat"><b>${statLabel(k)}</b> ${Number(stats[k] || 0)}</span>`).join('')}
+                        <span class="play-stat"><b>ENG</b> ${Number(energy.current || 0)}/${Number(energy.max || 100)}</span>
+                        <span class="play-stat"><b>MOOD</b> ${Number(ps.motivation || 0)}</span>
+                        <span class="play-stat"><b>SP</b> ${Number(ps.skill_points || 0)}</span>
+                        <span class="play-stat"><b>FANS</b> ${formatNumber(ps.fans)}</span>
+                    </div>
+                    <div class="play-summary-row play-summary-conditions">CONDITIONS: ${conditions}</div>
+                `;
+            }
+
+            renderPlayRecommendation(ps);
+            renderPlayActions(ps);
+            renderPlayScenario(ps);
+            renderPlaySkills(ps);
+
+            if (els.playerFinishBtn) els.playerFinishBtn.disabled = !(ps.can_finish || ps.phase === 'finish');
+            if (els.playerDeleteBtn) els.playerDeleteBtn.disabled = !(state.account && state.account.career && state.account.career.active);
+            if (els.playerStatus) {
+                els.playerStatus.innerText = ps.error ? `Error: ${ps.error}` : '';
+                els.playerStatus.classList.toggle('error', Boolean(ps.error));
+            }
+        }
+
+        function renderPlayRecommendation(ps) {
+            if (!els.playerRecommendation) return;
+            const rec = ps.recommendation;
+            if (!rec || !rec.action_id) {
+                els.playerRecommendation.innerHTML = '<div class="play-rec-muted">No recommendation for this state — every choice is yours.</div>';
+                return;
+            }
+            const action = (ps.actions || []).find(a => a.id === rec.action_id);
+            const factors = (rec.factors || []).map(f => `<span class="play-rec-factor"><b>${escapeHtml(f.label)}</b> ${escapeHtml(f.value)}</span>`).join('');
+            els.playerRecommendation.innerHTML = `
+                <div class="play-rec-head">RECOMMENDED: <strong>${escapeHtml(action ? action.label : rec.action_id)}</strong></div>
+                <div class="play-rec-reason">${escapeHtml(rec.reason || '')}</div>
+                ${factors ? `<div class="play-rec-factors">${factors}</div>` : ''}
+            `;
+        }
+
+        function renderPlayActions(ps) {
+            if (!els.playerActions) return;
+            const actions = ps.actions || [];
+            if (!actions.length) {
+                els.playerActions.innerHTML = '<div class="play-actions-empty">No legal actions in this state.</div>';
+                return;
+            }
+            const byKind = {};
+            actions.forEach(a => {
+                (byKind[a.kind] = byKind[a.kind] || []).push(a);
+            });
+            let html = '';
+            const kindOrder = ['command', 'event', 'race', 'race_continue', 'scenario', 'item_exchange', 'item_use', 'skill_purchase'];
+            kindOrder.forEach(kind => {
+                const rows = byKind[kind] || [];
+                if (!rows.length) return;
+                const title = {
+                    command: 'COMMANDS',
+                    event: 'EVENT CHOICE',
+                    race: 'RACES',
+                    race_continue: 'RACE RESULT',
+                    scenario: 'SCENARIO',
+                    item_exchange: 'SHOP',
+                    item_use: 'ITEMS',
+                    skill_purchase: 'SKILLS'
+                }[kind] || kind.toUpperCase();
+                html += `<div class="play-kind"><div class="play-kind-title">${title}</div><div class="play-kind-grid">`;
+                rows.forEach(a => {
+                    const disabled = !a.enabled;
+                    const reason = disabled ? (a.disabled_reason ? ` title="${escapeAttr(a.disabled_reason)}"` : '') : '';
+                    const badge = a.destructive ? '<span class="play-destructive">CONSEQUENTIAL</span>' : '';
+                    html += `<button type="button" class="play-action play-action-${escapeAttr(a.kind)}${disabled ? ' is-disabled' : ''}" data-action-id="${escapeAttr(a.id)}" data-destructive="${a.destructive ? '1' : '0'}"${reason}${disabled ? ' disabled' : ''}>${badge}<span class="play-action-label">${escapeHtml(a.label)}</span></button>`;
+                });
+                html += `</div></div>`;
+            });
+            els.playerActions.innerHTML = html;
+            els.playerActions.querySelectorAll('button[data-action-id]:not([disabled])').forEach(btn => {
+                btn.addEventListener('click', () => submitPlayAction(btn.dataset.actionId, btn.dataset.destructive === '1'));
+            });
+        }
+
+        function renderPlayScenario(ps) {
+            if (!els.playerScenario) return;
+            const ss = ps.scenario_state || {};
+            const slug = (ps.scenario || {}).slug;
+            let html = '';
+            if (slug === 'ura') {
+                const goals = ss.goals || [];
+                const finalInfo = ss.final || {};
+                html += `<div class="play-scenario-title">URA GOALS</div>`;
+                if (!goals.length && !finalInfo.is_final) html += '<div class="play-scenario-muted">No goal data captured.</div>';
+                goals.forEach(g => {
+                    html += `<div class="play-scenario-row">${g.cleared ? '✓' : '○'} ${escapeHtml(g.title || `Race ${g.program_id}`)} · T${g.turn}${g.required_fans ? ` · ${formatNumber(g.required_fans)} fans` : ''}</div>`;
+                });
+                if (finalInfo.is_final) html += `<div class="play-scenario-row play-scenario-highlight">URA FINAL in progress (program ${finalInfo.final_program_id})</div>`;
+            } else if (slug === 'unity') {
+                const cup = ss.cup || {};
+                const spirit = ss.spirit || {};
+                html += `<div class="play-scenario-title">UNITY CUP · Round ${Number(cup.round || 0)} · ${escapeHtml(cup.phase || '')}${cup.is_final ? ' · FINAL' : ''}</div>`;
+                if (ss.roster_decision_required) html += '<div class="play-scenario-highlight">Roster selection required</div>';
+                if (ss.opponent_decision_required) html += '<div class="play-scenario-highlight">Opponent selection required</div>';
+                html += `<div class="play-scenario-row">Team rank ${Number(ss.team_rank || 0)} · ${(ss.team_members || []).length} members</div>`;
+                html += `<div class="play-scenario-row">Spirit burst: ${spirit.burst_ready ? 'READY' : 'charging'} (${(spirit.gauge_array || []).map(g => `${g.category}:${g.value}`).join(' · ') || '—'})</div>`;
+                const roster = (ss.roster_slots || []).map(s => `${s.category}:${s.filled ? 'filled' : 'open'}`).join(' · ');
+                if (roster) html += `<div class="play-scenario-row">Roster: ${escapeHtml(roster)}</div>`;
+            } else if (slug === 'trackblazer') {
+                const coins = Number(ss.mant_coin || 0);
+                html += `<div class="play-scenario-title">TRACKBLAZER · ${formatNumber(coins)} coins</div>`;
+                if ((ss.rival_races || []).length) html += `<div class="play-scenario-row">Rival races: ${ss.rival_races.map(r => `#${r.program_id}`).join(', ')}</div>`;
+                if (ss.climax_ready) html += `<div class="play-scenario-highlight">Twinkle Star Climax ready (program ${ss.climax_program_id})</div>`;
+                if (!(ss.climax_ready || (ss.rival_races || []).length)) html += '<div class="play-scenario-muted">No Trackblazer event pending.</div>';
+            } else if (slug === 'grand_concert') {
+                const pp = ss.performance_points || {};
+                const ppText = Object.keys(pp).length ? Object.entries(pp).map(([k, v]) => `${k}:${v}`).join(' · ') : '—';
+                html += `<div class="play-scenario-title">GRAND CONCERT · Hype ${Number(ss.hype || 0)}</div>`;
+                html += `<div class="play-scenario-row">PP: ${escapeHtml(ppText)}</div>`;
+                html += `<div class="play-scenario-row">Songs learned: ${Number(ss.learned_song_count || 0)} · this half-year: ${Number(ss.songs_this_half || 0)}/${4}</div>`;
+                const promo = ss.promo || {};
+                if (promo.ready && !promo.done) html += `<div class="play-scenario-highlight">Promo concert ready (program ${promo.program_id})</div>`;
+                if (ss.grand_concert_ready) html += `<div class="play-scenario-highlight">GRAND CONCERT READY</div>`;
+            } else {
+                html = '';
+            }
+            els.playerScenario.innerHTML = html;
+        }
+
+        function renderPlaySkills(ps) {
+            if (!els.playerSkillList) return;
+            const skills = ps.skills || {};
+            const options = skills.options || [];
+            const owned = skills.owned || [];
+            const remaining = Number(skills.remaining_sp !== undefined ? skills.remaining_sp : ps.skill_points || 0);
+            let html = '';
+            if (owned.length) {
+                html += `<div class="play-skill-owned">OWNED: ${owned.map(o => escapeHtml(o.name || o.skill_id)).join(', ') || '—'}</div>`;
+            }
+            if (!options.length) {
+                html += '<div class="play-scenario-muted">No purchasable skills available.</div>';
+            }
+            options.forEach(o => {
+                const selected = state.play.selectedSkillIds.includes(`skill:${o.skill_id}`);
+                const disabled = !o.affordable;
+                html += `<label class="play-skill-row${selected ? ' is-selected' : ''}">
+                    <input type="checkbox" data-skill-id="skill:${o.skill_id}" ${selected ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+                    <span class="play-skill-name">${escapeHtml(o.name || o.skill_id)}</span>
+                    <span class="play-skill-cost">${Number(o.cost || 0)} SP</span>
+                    <span class="play-skill-meta">hint ${Number(o.hint_level || 0)} · tier ${Number(o.tier || 0)}${(o.prerequisite_skill_ids || []).length ? ` · includes ${o.prerequisite_skill_ids.length} prereq` : ''}</span>
+                </label>`;
+            });
+            els.playerSkillList.innerHTML = html;
+            els.playerSkillList.querySelectorAll('input[data-skill-id]').forEach(input => {
+                input.addEventListener('change', () => {
+                    const id = input.dataset.skillId;
+                    if (input.checked) {
+                        if (!state.play.selectedSkillIds.includes(id)) state.play.selectedSkillIds.push(id);
+                    } else {
+                        state.play.selectedSkillIds = state.play.selectedSkillIds.filter(x => x !== id);
+                    }
+                    updateSkillPurchaseButton(remaining);
+                });
+            });
+            updateSkillPurchaseButton(remaining);
+        }
+
+        function updateSkillPurchaseButton(remaining) {
+            if (!els.playerSkillCost) return;
+            const options = ((state.play.state || {}).skills || {}).options || [];
+            const selectedIds = state.play.selectedSkillIds.map(id => Number(String(id).split(':')[1]));
+            const cost = options.filter(o => selectedIds.includes(o.skill_id)).reduce((sum, o) => sum + Number(o.cost || 0), 0);
+            els.playerSkillCost.innerText = `${selectedIds.length ? selectedIds.length : 0} skill(s) · ${cost} SP`;
+            if (els.playerSkillBuy) {
+                els.playerSkillBuy.disabled = state.play.selectedSkillIds.length === 0 || cost > remaining || state.play.busy;
+            }
+        }
+
+        async function submitPlayAction(actionId, isConsequential) {
+            const ps = state.play.state;
+            if (!ps || state.play.busy) return;
+            if (isConsequential) {
+                const action = (ps.actions || []).find(a => a.id === actionId);
+                const label = action ? action.label : actionId;
+                if (!window.confirm(`Confirm: ${label}?`)) return;
+            }
+            const body = {
+                action_id: actionId,
+                expected_revision: currentPlayRevision(),
+                selected_action_ids: actionId === 'skills:purchase' ? state.play.selectedSkillIds : []
+            };
+            setPlayBusy(true);
+            if (els.playerStatus) els.playerStatus.innerText = 'Working…';
+            try {
+                const data = await apiJson('/api/play/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (data.success && data.state) {
+                    applyPlayState(data.state);
+                    if (data.state.phase === 'finish') {
+                        // natural finish still needs the explicit finish click
+                    }
+                    renderPlayState();
+                    if (els.playerStatus) els.playerStatus.innerText = 'Ready';
+                } else if (data.state) {
+                    // stale revision or upstream failure: render fresh server state
+                    applyPlayState(data.state);
+                    renderPlayState();
+                    if (els.playerStatus) {
+                        els.playerStatus.innerText = `State changed; review before acting again. (${data.detail || data.error || ''})`;
+                        els.playerStatus.classList.add('error');
+                    }
+                } else {
+                    if (els.playerStatus) {
+                        els.playerStatus.innerText = data.detail || data.error || 'Action failed';
+                        els.playerStatus.classList.add('error');
+                    }
+                }
+            } catch (e) {
+                if (els.playerStatus) {
+                    els.playerStatus.innerText = e.message || 'Network error';
+                    els.playerStatus.classList.add('error');
+                }
+            } finally {
+                setPlayBusy(false);
+            }
+        }
+
+        if (els.playerRefreshBtn) {
+            els.playerRefreshBtn.addEventListener('click', async () => {
+                if (state.play.busy) return;
+                setPlayBusy(true);
+                try {
+                    const data = await apiJson('/api/play/refresh', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ expected_revision: currentPlayRevision() })
+                    });
+                    if (data.success && data.state) {
+                        applyPlayState(data.state);
+                        renderPlayState();
+                    }
+                } catch (e) {}
+                finally { setPlayBusy(false); }
+            });
+        }
+        if (els.playerFinishBtn) {
+            els.playerFinishBtn.addEventListener('click', () => {
+                openCareerModal();
+            });
+        }
+        if (els.playerDeleteBtn) {
+            els.playerDeleteBtn.addEventListener('click', () => {
+                openCareerModal();
+            });
+        }
+        if (els.playerSkillBtn) {
+            els.playerSkillBtn.addEventListener('click', () => {
+                state.play.skillsOpen = !state.play.skillsOpen;
+                if (els.playerSkillPanel) els.playerSkillPanel.style.display = state.play.skillsOpen ? 'block' : 'none';
+            });
+        }
+        if (els.playerSkillBuy) {
+            els.playerSkillBuy.addEventListener('click', () => {
+                submitPlayAction('skills:purchase', true);
+            });
+        }
+
         bindMasterDataControls();
         bindLibraryFilters();
         setLoadingScreen(true);

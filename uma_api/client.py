@@ -199,19 +199,11 @@ client.on("loggedOn", () => {
 
 SALT = b'co!=Y;(UQCGxJ_n82'
 HEAD = bytes.fromhex('6b20e2ab6c311330f761d737ce3f3025750850665eea58b6372f8d2f57501eb344bdb7270a9067f5b63cd61f152cfb986cbfbf7a')
-SENSITIVE_ERROR_KEYS = {"auth_key", "steam_session_ticket", "sid", "udid", "device_id"}
 
-
-def redact_for_console(value, key=""):
-    if key in SENSITIVE_ERROR_KEYS:
-        return "<redacted>"
-    if isinstance(value, dict):
-        return {k: redact_for_console(v, k) for k, v in value.items()}
-    if isinstance(value, list):
-        return [redact_for_console(item, key) for item in value[:20]]
-    if isinstance(value, str) and len(value) > 160:
-        return value[:160] + "...<truncated>"
-    return value
+# One canonical recursive redactor lives in career_bot.capture; api_log(),
+# error formatting, and the recorder all funnel through it before any value
+# reaches disk or a callback.
+from career_bot.capture import SENSITIVE_ERROR_KEYS, redact, redact_for_console  # noqa: E402
 
 
 def format_api_error(ep, rc, res):
@@ -453,11 +445,12 @@ class UmaClient:
             self.trace_file = None
 
     def api_log(self, direction, ep, data, req_id=None):
+        # one recursive redactor before any disk/callback output
         log_entry = {
             "ts": time.time(),
             "direction": direction,
             "endpoint": ep,
-            "data": data
+            "data": redact(data)
         }
         if req_id:
             log_entry["req_id"] = req_id
@@ -743,10 +736,12 @@ class UmaClient:
                 try:
                     debug_info = {
                         "endpoint": ep,
-                        "request_payload": payload,
-                        "response": res
+                        "request_payload": redact(payload),
+                        "response": redact(res),
                     }
-                    with open("h:/Antigravity Repos/umamusume-sweepy-enhanced/debug_api_error.json", "w", encoding="utf-8") as f:
+                    diag_dir = runtime_output_root() / "diagnostics"
+                    diag_dir.mkdir(parents=True, exist_ok=True)
+                    with open(diag_dir / "debug_api_error.json", "w", encoding="utf-8") as f:
                         json.dump(debug_info, f, indent=2, default=str)
                 except Exception as ex:
                     print(f"Failed to write debug_api_error.json: {ex}")
