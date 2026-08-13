@@ -146,19 +146,20 @@ class CareerSession:
         with self.lock:
             if expected_revision is None or int(expected_revision) != self.revision:
                 return {"success": False, "error": "stale_revision", "state": self._snapshot_locked()}
-            before = self._fingerprint(self.raw_state)
             try:
                 current_turn = self._turn_of(self.raw_state)
                 client.finish_career(current_turn=current_turn, is_force_delete=True)
             except Exception as exc:
-                return self._reconcile_failure(client, before, exc)
-            try:
-                raw = client.load_career()
-            except Exception as exc:
-                raise UpstreamGameError(f"load_career after delete failed: {exc}") from exc
-            raw = self._settle_transport(client, raw)
-            self._publish(raw, self.preset)
-            return {"success": True, "state": self._snapshot_locked()}
+                # after a force-delete there may be no career left to
+                # reconcile against; surface the failure with the old state
+                return {"success": False, "error": "upstream_failed", "detail": str(exc), "state": self._snapshot_locked()}
+            # delete success is terminal: never load_career() afterwards (the
+            # game has no active career). The route refreshes load/index.
+            self.raw_state = None
+            self.normalized = None
+            self.preset = None
+            self.revision += 1
+            return {"success": True, "state": self._empty_snapshot()}
 
     # ------------------------------------------------------------------
     # transitions (called by adapters; transport-only follow-through allowed)
@@ -393,6 +394,35 @@ class CareerSession:
         snapshot = copy.deepcopy(self.normalized or {})
         snapshot["revision"] = self.revision
         return snapshot
+
+    def _empty_snapshot(self):
+        """PlayState envelope for a session with no active career (e.g. after
+        a force-delete)."""
+        return {
+            "revision": self.revision,
+            "scenario": {"id": 0, "slug": "unsupported", "name": "Unsupported"},
+            "phase": "unsupported",
+            "turn": 0,
+            "playing_state": 1,
+            "trainee": {},
+            "stats": {},
+            "energy": {},
+            "motivation": 0,
+            "skill_points": 0,
+            "fans": 0,
+            "conditions": [],
+            "support_bonds": [],
+            "commands": [],
+            "events": [],
+            "race": None,
+            "inventory": [],
+            "skills": {"owned": [], "options": [], "remaining_sp": 0},
+            "scenario_state": {},
+            "actions": [],
+            "recommendation": None,
+            "can_finish": False,
+            "error": "no active career",
+        }
 
     def _settle_transport(self, client, raw):
         """Auto-resolve transport-only states: minigame, blocked state, and a

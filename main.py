@@ -2114,7 +2114,13 @@ async def play_action(req: PlayActionRequest, response: Response):
         req.expected_revision,
         selection=req.selected_action_ids,
     )
-    return _play_result(result)
+    payload = _play_result(result)
+    if isinstance(payload, dict) and payload.get("success") and req.action_id == "finish":
+        # the finish action is terminal: refresh the account so a new career
+        # can be started without a relogin
+        _refresh_account_after_career()
+        payload["account"] = active_account
+    return payload
 
 
 @app.post("/api/play/refresh")
@@ -2141,6 +2147,8 @@ async def finish_career_endpoint(req: FinishCareerRequest, response: Response):
         return JSONResponse(status_code=409, content={"success": False, "detail": "no active session; call /api/play/state"})
     result = career_session.finish(active_client, req.expected_revision)
     payload = _play_result(result)
+    if isinstance(payload, JSONResponse):
+        return payload
     if payload.get("success"):
         _refresh_account_after_career()
     return payload
@@ -2155,6 +2163,8 @@ async def delete_career(req: DeleteCareerRequest, response: Response):
         return JSONResponse(status_code=409, content={"success": False, "detail": "no active session; call /api/play/state"})
     result = career_session.delete(active_client, req.expected_revision)
     payload = _play_result(result)
+    if isinstance(payload, JSONResponse):
+        return payload
     if payload.get("success"):
         _refresh_account_after_career()
     return payload

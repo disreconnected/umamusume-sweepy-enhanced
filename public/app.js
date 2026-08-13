@@ -646,16 +646,44 @@ const els = {
             state.isDeletingCareer = false;
             state.isFinishingCareer = false;
         }
-        function openCareerModal() {
+        function syncCareerModalAvailability() {
+            const ready = !!(state.play && state.play.state);
+            if (els.careerFinishBtn) els.careerFinishBtn.disabled = !ready;
+            if (els.careerDeleteBtn) els.careerDeleteBtn.disabled = !ready;
+        }
+        async function openCareerModal() {
             const career = state.account && state.account.career;
             if (!career || !career.active) return;
             setCareerModalCopy(CAREER_MODAL_DEFAULT_COPY);
             els.careerModal.style.display = 'flex';
+            syncCareerModalAvailability();
+            if (!(state.play && state.play.state)) {
+                // the finish/delete requests need the live session revision
+                try {
+                    const data = await apiJson('/api/play/state');
+                    if (data.success && data.state) {
+                        applyPlayState(data.state);
+                        renderPlayState();
+                    }
+                } catch (e) {}
+                syncCareerModalAvailability();
+            }
         }
         function lockCareerModalButtons() {
             els.careerDeleteBtn.disabled = true;
             if (els.careerFinishBtn) els.careerFinishBtn.disabled = true;
         }
+        async function refreshAccountStrip() {
+            try {
+                const sess = await apiJson('/api/session?t=' + Date.now());
+                if (sess && sess.success && sess.account) {
+                    renderAccountStrip(sess.account);
+                    return;
+                }
+            } catch (e) {}
+            renderAccountStrip(state.account);
+        }
+
         async function deleteCareer() {
             const career = state.account && state.account.career;
             if (!career || !career.active || state.isDeletingCareer || state.isFinishingCareer) return;
@@ -679,7 +707,7 @@ const els = {
                 if (data.state) applyPlayState(data.state);
                 closeCareerModal();
                 hidePlayerPanel();
-                renderAccountStrip(state.account);
+                await refreshAccountStrip();
             } catch (e) {
                 setCareerModalCopy(escapeHtml(e.message || 'Delete failed'));
                 els.careerDeleteBtn.innerText = 'RETRY';
@@ -712,7 +740,7 @@ const els = {
                 if (data.state) applyPlayState(data.state);
                 closeCareerModal();
                 hidePlayerPanel();
-                renderAccountStrip(state.account);
+                await refreshAccountStrip();
             } catch (e) {
                 setCareerModalCopy(escapeHtml(e.message || 'Finish failed'));
                 els.careerFinishBtn.innerText = 'RETRY';
@@ -4370,9 +4398,7 @@ const els = {
                 });
                 if (data.success && data.state) {
                     applyPlayState(data.state);
-                    if (data.state.phase === 'finish') {
-                        // natural finish still needs the explicit finish click
-                    }
+                    if (data.account) renderAccountStrip(data.account);
                     renderPlayState();
                     if (els.playerStatus) els.playerStatus.innerText = 'Ready';
                 } else if (data.state) {

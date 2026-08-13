@@ -73,6 +73,44 @@ class TestPlayApi(unittest.TestCase):
         self.assertEqual(bad.status_code, 422)
         self.assertEqual(bad.json()["error"], "unknown_action")
 
+    def test_finish_stale_revision_returns_409_not_500(self):
+        """_play_result JSONResponse errors must pass through finish/delete
+        unchanged (review finding: stale/upstream errors became 500s)."""
+        login = self.client.post("/api/login", json={"username": "u", "password": "p"})
+        self.assertTrue(login.json().get("success"))
+        state = self.client.get("/api/play/state").json()["state"]
+        stale = self.client.post("/api/career/finish", json={"expected_revision": state["revision"] + 9})
+        self.assertEqual(stale.status_code, 409)
+        self.assertEqual(stale.json()["error"], "stale_revision")
+        self.assertEqual(stale.json()["state"]["revision"], state["revision"])
+
+    def test_delete_stale_revision_returns_409_not_500(self):
+        login = self.client.post("/api/login", json={"username": "u", "password": "p"})
+        self.assertTrue(login.json().get("success"))
+        state = self.client.get("/api/play/state").json()["state"]
+        stale = self.client.post("/api/career/delete", json={"expected_revision": state["revision"] + 9})
+        self.assertEqual(stale.status_code, 409)
+
+    def test_finish_action_refreshes_account(self):
+        """The grid finish action is terminal: account refresh + new-career
+        availability, no relogin needed."""
+        login = self.client.post("/api/login", json={"username": "u", "password": "p"})
+        self.assertTrue(login.json().get("success"))
+        st = self.client.get("/api/play/state").json()["state"]
+        # drive to the finish state (013)
+        for aid in ["command:1:101:0:0", "command:7:701:0:0", "event:501:1",
+                    "command:1:101:0:0", "race:10101", "command:1:101:0:0", "race:accept",
+                    "command:1:101:0:0"]:
+            r = self.client.post("/api/play/action", json={"action_id": aid, "expected_revision": st["revision"]})
+            st = r.json()["state"]
+        self.assertEqual(st["phase"], "finish")
+        r = self.client.post("/api/play/action", json={"action_id": "finish", "expected_revision": st["revision"]})
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertTrue(body.get("success"))
+        self.assertIn("account", body)
+        self.assertIsNone(body["account"]["career"])
+
     def test_no_store_on_session_and_play(self):
         res = self.client.get("/api/session")
         self.assertEqual(res.headers.get("cache-control"), None)  # non-mutating GET
