@@ -3722,3 +3722,88 @@ body.dashboard-mode .turn-delay-control {
   text-decoration: underline;
 }
 
+
+/* ---- Compact manual player ------------------------------------------------- */
+.player-panel {
+    margin: 14px;
+    border: 1px solid var(--border, #3a2f44);
+    border-radius: 12px;
+    background: var(--panel, #221a2e);
+    overflow: hidden;
+}
+.player-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.player-toolbar { display: flex; gap: 8px; margin-left: auto; }
+.player-summary {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 10px 12px; border-radius: 8px;
+    background: var(--panel-2, #2b2138);
+}
+.play-summary-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; }
+.play-summary-scenario { font-weight: 700; }
+.play-summary-scenario em { font-style: normal; opacity: 0.6; }
+.play-summary-phase {
+    padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    background: #3a2f44; color: #cfc2dd;
+}
+.play-summary-turn { margin-left: auto; font-weight: 700; }
+.play-summary-stats { gap: 12px; }
+.play-stat b { color: var(--accent, #ff7fb0); margin-right: 4px; }
+.play-summary-conditions { opacity: 0.75; font-size: 12px; }
+.player-status { min-height: 18px; font-size: 12px; color: #7fd89a; }
+.player-status.error { color: #ff6b6b; }
+.player-recommendation {
+    padding: 10px 12px; border-radius: 8px; border: 1px dashed var(--accent, #ff7fb0);
+    background: color-mix(in srgb, var(--accent, #ff7fb0) 8%, transparent);
+}
+.play-rec-head { font-size: 13px; }
+.play-rec-reason { opacity: 0.85; font-size: 12px; margin-top: 2px; }
+.play-rec-factors { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.play-rec-factor { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #3a2f44; }
+.play-rec-factor b { margin-right: 4px; color: var(--accent, #ff7fb0); }
+.play-rec-muted { opacity: 0.6; font-size: 12px; }
+.player-split { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; }
+@media (max-width: 1100px) { .player-split { grid-template-columns: 1fr; } }
+.player-column { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.player-column-title { font-size: 11px; font-weight: 700; letter-spacing: 1px; opacity: 0.7; }
+.player-actions { display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; }
+.play-actions-empty { opacity: 0.6; font-size: 12px; padding: 8px 0; }
+.play-kind { display: flex; flex-direction: column; gap: 6px; }
+.play-kind-title { font-size: 10px; letter-spacing: 1.5px; opacity: 0.55; }
+.play-kind-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.play-action {
+    position: relative; text-align: left; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid var(--border, #3a2f44); background: var(--panel-2, #2b2138);
+    color: inherit; cursor: pointer; font-size: 12px; line-height: 1.35;
+}
+.play-action:hover:not(:disabled) { border-color: var(--accent, #ff7fb0); }
+.play-action.is-disabled { opacity: 0.45; cursor: not-allowed; }
+.play-action-label { display: block; }
+.play-destructive {
+    position: absolute; top: -7px; right: 6px; font-size: 8px; letter-spacing: 0.5px;
+    background: #ff6b6b; color: #fff; padding: 1px 6px; border-radius: 999px;
+}
+.player-scenario {
+    padding: 10px 12px; border-radius: 8px; background: var(--panel-2, #2b2138);
+    display: flex; flex-direction: column; gap: 6px; font-size: 12px;
+}
+.play-scenario-title { font-weight: 700; }
+.play-scenario-highlight { color: #ffd76b; font-weight: 600; }
+.play-scenario-muted { opacity: 0.6; }
+.play-scenario-row { opacity: 0.9; }
+.player-skills-head { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.player-skill-panel { padding: 10px 12px; border-radius: 8px; background: var(--panel-2, #2b2138); display: flex; flex-direction: column; gap: 6px; }
+.player-skill-list { display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; }
+.play-skill-row {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center;
+    padding: 6px 8px; border-radius: 6px; font-size: 12px; cursor: pointer;
+}
+.play-skill-row:hover { background: #3a2f44; }
+.play-skill-row.is-selected { background: color-mix(in srgb, var(--accent, #ff7fb0) 12%, transparent); }
+.play-skill-name { font-weight: 600; }
+.play-skill-cost { color: var(--accent, #ff7fb0); }
+.play-skill-meta { grid-column: 2 / 4; opacity: 0.6; font-size: 11px; }
+.play-skill-owned { font-size: 11px; opacity: 0.7; }
+.player-skill-buy-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.player-skill-cost { font-size: 12px; opacity: 0.85; }
+.scenario-picker-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.scenario-picker-row .form-label { margin: 0; white-space: nowrap; }

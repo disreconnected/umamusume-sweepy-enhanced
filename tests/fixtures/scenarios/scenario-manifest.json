@@ -1,0 +1,522 @@
+{
+  "action_shapes": {
+    "change_running_style": "single_mode_free/change_running_style",
+    "command": "single_mode_free/exec_command",
+    "concert_grand_start": "single_mode_free/concert_grand_start",
+    "concert_song_purchase": "single_mode_free/concert_song_purchase",
+    "concert_technique_purchase": "single_mode_free/concert_technique_purchase",
+    "event": "single_mode_free/check_event",
+    "finish": "single_mode_free/finish",
+    "item_exchange": "single_mode_free/multi_item_exchange",
+    "item_use": "single_mode_free/multi_item_use",
+    "load_career": "single_mode_free/load",
+    "minigame_end": "single_mode_free/minigame_end",
+    "race_continue": "single_mode_free/continue",
+    "race_end": "single_mode_free/race_end",
+    "race_entry": "single_mode_free/race_entry",
+    "race_out": "single_mode_free/race_out",
+    "race_start": "single_mode_free/race_start",
+    "skill_purchase": "single_mode_free/gain_skills",
+    "unity_opponent": "single_mode_free/unity_opponent",
+    "unity_roster": "single_mode_free/unity_roster"
+  },
+  "scenarios": {
+    "grand_concert": {
+      "action_shapes": {
+        "change_running_style": {
+          "endpoint": "single_mode_free/change_running_style",
+          "payload_keys": []
+        },
+        "command": {
+          "endpoint": "single_mode_free/exec_command",
+          "payload_keys": []
+        },
+        "concert_grand_start": {
+          "endpoint": "single_mode_free/concert_grand_start",
+          "payload_keys": []
+        },
+        "concert_song_purchase": {
+          "endpoint": "single_mode_free/concert_song_purchase",
+          "payload_keys": []
+        },
+        "concert_technique_purchase": {
+          "endpoint": "single_mode_free/concert_technique_purchase",
+          "payload_keys": []
+        },
+        "event": {
+          "endpoint": "single_mode_free/check_event",
+          "payload_keys": []
+        },
+        "finish": {
+          "endpoint": "single_mode_free/finish",
+          "payload_keys": []
+        },
+        "item_exchange": {
+          "endpoint": "single_mode_free/multi_item_exchange",
+          "payload_keys": []
+        },
+        "item_use": {
+          "endpoint": "single_mode_free/multi_item_use",
+          "payload_keys": []
+        },
+        "load_career": {
+          "endpoint": "single_mode_free/load",
+          "payload_keys": []
+        },
+        "minigame_end": {
+          "endpoint": "single_mode_free/minigame_end",
+          "payload_keys": []
+        },
+        "race_continue": {
+          "endpoint": "single_mode_free/continue",
+          "payload_keys": []
+        },
+        "race_end": {
+          "endpoint": "single_mode_free/race_end",
+          "payload_keys": []
+        },
+        "race_entry": {
+          "endpoint": "single_mode_free/race_entry",
+          "payload_keys": []
+        },
+        "race_out": {
+          "endpoint": "single_mode_free/race_out",
+          "payload_keys": []
+        },
+        "race_start": {
+          "endpoint": "single_mode_free/race_start",
+          "payload_keys": []
+        },
+        "skill_purchase": {
+          "endpoint": "single_mode_free/gain_skills",
+          "payload_keys": []
+        },
+        "unity_opponent": {
+          "endpoint": "single_mode_free/unity_opponent",
+          "payload_keys": []
+        },
+        "unity_roster": {
+          "endpoint": "single_mode_free/unity_roster",
+          "payload_keys": []
+        }
+      },
+      "discriminators": [
+        "chara_info",
+        "concert_info",
+        "free_data_set",
+        "home_info",
+        "race_condition_array",
+        "single_mode_finish_common",
+        "unchecked_event_array"
+      ],
+      "endpoints": [
+        "single_mode_free/load"
+      ],
+      "fixture_files": [
+        "001_load_career.json",
+        "002_technique_offer.json",
+        "003_song_pacing.json",
+        "004_promo_ready.json",
+        "005_grand_ready.json",
+        "006_event_multi.json",
+        "007_finish.json"
+      ],
+      "id": 3,
+      "name": "Our Grand Concert",
+      "slug": "grand_concert",
+      "state_kinds": [
+        "concert",
+        "event",
+        "finish",
+        "home",
+        "race_select"
+      ]
+    },
+    "trackblazer": {
+      "action_shapes": {
+        "change_running_style": {
+          "endpoint": "single_mode_free/change_running_style",
+          "payload_keys": []
+        },
+        "command": {
+          "endpoint": "single_mode_free/exec_command",
+          "payload_keys": [
+            "command_id",
+            "command_type"
+          ]
+        },
+        "concert_grand_start": {
+          "endpoint": "single_mode_free/concert_grand_start",
+          "payload_keys": []
+        },
+        "concert_song_purchase": {
+          "endpoint": "single_mode_free/concert_song_purchase",
+          "payload_keys": []
+        },
+        "concert_technique_purchase": {
+          "endpoint": "single_mode_free/concert_technique_purchase",
+          "payload_keys": []
+        },
+        "event": {
+          "endpoint": "single_mode_free/check_event",
+          "payload_keys": [
+            "choice_number",
+            "event_id"
+          ]
+        },
+        "finish": {
+          "endpoint": "single_mode_free/finish",
+          "payload_keys": []
+        },
+        "item_exchange": {
+          "endpoint": "single_mode_free/multi_item_exchange",
+          "payload_keys": []
+        },
+        "item_use": {
+          "endpoint": "single_mode_free/multi_item_use",
+          "payload_keys": []
+        },
+        "load_career": {
+          "endpoint": "single_mode_free/load",
+          "payload_keys": []
+        },
+        "minigame_end": {
+          "endpoint": "single_mode_free/minigame_end",
+          "payload_keys": []
+        },
+        "race_continue": {
+          "endpoint": "single_mode_free/continue",
+          "payload_keys": []
+        },
+        "race_end": {
+          "endpoint": "single_mode_free/race_end",
+          "payload_keys": []
+        },
+        "race_entry": {
+          "endpoint": "single_mode_free/race_entry",
+          "payload_keys": [
+            "program_id"
+          ]
+        },
+        "race_out": {
+          "endpoint": "single_mode_free/race_out",
+          "payload_keys": []
+        },
+        "race_start": {
+          "endpoint": "single_mode_free/race_start",
+          "payload_keys": [
+            "is_short"
+          ]
+        },
+        "skill_purchase": {
+          "endpoint": "single_mode_free/gain_skills",
+          "payload_keys": []
+        },
+        "unity_opponent": {
+          "endpoint": "single_mode_free/unity_opponent",
+          "payload_keys": []
+        },
+        "unity_roster": {
+          "endpoint": "single_mode_free/unity_roster",
+          "payload_keys": []
+        }
+      },
+      "discriminators": [
+        "chara_info",
+        "free_data_set",
+        "home_info",
+        "race_condition_array",
+        "race_start_info",
+        "single_mode_finish_common",
+        "trackblazer_info",
+        "unchecked_event_array"
+      ],
+      "endpoints": [
+        "single_mode_free/check_event",
+        "single_mode_free/exec_command",
+        "single_mode_free/load",
+        "single_mode_free/race_end",
+        "single_mode_free/race_entry",
+        "single_mode_free/race_out",
+        "single_mode_free/race_start"
+      ],
+      "fixture_files": [
+        "001_load_career.json",
+        "002_train_speed.json",
+        "003_event_multi.json",
+        "004_event_choice.json",
+        "005_race_select.json",
+        "006_race_entry.json",
+        "007_race_start.json",
+        "008_race_end.json",
+        "009_race_out.json",
+        "010_race_continue.json",
+        "011_shop.json",
+        "012_skills.json",
+        "013_finish.json",
+        "014_climax.json",
+        "015_event_forced.json",
+        "016_low_energy.json",
+        "017_friendship.json"
+      ],
+      "id": 4,
+      "name": "Trackblazer",
+      "slug": "trackblazer",
+      "state_kinds": [
+        "event",
+        "finish",
+        "home",
+        "race_running",
+        "race_select",
+        "trackblazer"
+      ]
+    },
+    "unity": {
+      "action_shapes": {
+        "change_running_style": {
+          "endpoint": "single_mode_free/change_running_style",
+          "payload_keys": []
+        },
+        "command": {
+          "endpoint": "single_mode_free/exec_command",
+          "payload_keys": []
+        },
+        "concert_grand_start": {
+          "endpoint": "single_mode_free/concert_grand_start",
+          "payload_keys": []
+        },
+        "concert_song_purchase": {
+          "endpoint": "single_mode_free/concert_song_purchase",
+          "payload_keys": []
+        },
+        "concert_technique_purchase": {
+          "endpoint": "single_mode_free/concert_technique_purchase",
+          "payload_keys": []
+        },
+        "event": {
+          "endpoint": "single_mode_free/check_event",
+          "payload_keys": []
+        },
+        "finish": {
+          "endpoint": "single_mode_free/finish",
+          "payload_keys": []
+        },
+        "item_exchange": {
+          "endpoint": "single_mode_free/multi_item_exchange",
+          "payload_keys": []
+        },
+        "item_use": {
+          "endpoint": "single_mode_free/multi_item_use",
+          "payload_keys": []
+        },
+        "load_career": {
+          "endpoint": "single_mode_free/load",
+          "payload_keys": []
+        },
+        "minigame_end": {
+          "endpoint": "single_mode_free/minigame_end",
+          "payload_keys": []
+        },
+        "race_continue": {
+          "endpoint": "single_mode_free/continue",
+          "payload_keys": []
+        },
+        "race_end": {
+          "endpoint": "single_mode_free/race_end",
+          "payload_keys": []
+        },
+        "race_entry": {
+          "endpoint": "single_mode_free/race_entry",
+          "payload_keys": []
+        },
+        "race_out": {
+          "endpoint": "single_mode_free/race_out",
+          "payload_keys": []
+        },
+        "race_start": {
+          "endpoint": "single_mode_free/race_start",
+          "payload_keys": []
+        },
+        "skill_purchase": {
+          "endpoint": "single_mode_free/gain_skills",
+          "payload_keys": []
+        },
+        "unity_opponent": {
+          "endpoint": "single_mode_free/unity_opponent",
+          "payload_keys": []
+        },
+        "unity_roster": {
+          "endpoint": "single_mode_free/unity_roster",
+          "payload_keys": []
+        }
+      },
+      "discriminators": [
+        "chara_info",
+        "free_data_set",
+        "home_info",
+        "single_mode_finish_common",
+        "unchecked_event_array",
+        "unity_cup_info",
+        "unity_opponent_array",
+        "unity_spirit_info",
+        "unity_team_info"
+      ],
+      "endpoints": [
+        "single_mode_free/load"
+      ],
+      "fixture_files": [
+        "001_load_career.json",
+        "002_roster_decision.json",
+        "003_opponent_decision.json",
+        "004_spirit_burst.json",
+        "005_event_multi.json",
+        "006_finish.json"
+      ],
+      "id": 2,
+      "name": "Unity Cup",
+      "slug": "unity",
+      "state_kinds": [
+        "event",
+        "finish",
+        "home",
+        "unity"
+      ]
+    },
+    "ura": {
+      "action_shapes": {
+        "change_running_style": {
+          "endpoint": "single_mode_free/change_running_style",
+          "payload_keys": []
+        },
+        "command": {
+          "endpoint": "single_mode_free/exec_command",
+          "payload_keys": []
+        },
+        "concert_grand_start": {
+          "endpoint": "single_mode_free/concert_grand_start",
+          "payload_keys": []
+        },
+        "concert_song_purchase": {
+          "endpoint": "single_mode_free/concert_song_purchase",
+          "payload_keys": []
+        },
+        "concert_technique_purchase": {
+          "endpoint": "single_mode_free/concert_technique_purchase",
+          "payload_keys": []
+        },
+        "event": {
+          "endpoint": "single_mode_free/check_event",
+          "payload_keys": [
+            "choice_number",
+            "event_id"
+          ]
+        },
+        "finish": {
+          "endpoint": "single_mode_free/finish",
+          "payload_keys": []
+        },
+        "item_exchange": {
+          "endpoint": "single_mode_free/multi_item_exchange",
+          "payload_keys": []
+        },
+        "item_use": {
+          "endpoint": "single_mode_free/multi_item_use",
+          "payload_keys": []
+        },
+        "load_career": {
+          "endpoint": "single_mode_free/load",
+          "payload_keys": []
+        },
+        "minigame_end": {
+          "endpoint": "single_mode_free/minigame_end",
+          "payload_keys": []
+        },
+        "race_continue": {
+          "endpoint": "single_mode_free/continue",
+          "payload_keys": []
+        },
+        "race_end": {
+          "endpoint": "single_mode_free/race_end",
+          "payload_keys": []
+        },
+        "race_entry": {
+          "endpoint": "single_mode_free/race_entry",
+          "payload_keys": [
+            "program_id"
+          ]
+        },
+        "race_out": {
+          "endpoint": "single_mode_free/race_out",
+          "payload_keys": []
+        },
+        "race_start": {
+          "endpoint": "single_mode_free/race_start",
+          "payload_keys": [
+            "is_short"
+          ]
+        },
+        "skill_purchase": {
+          "endpoint": "single_mode_free/gain_skills",
+          "payload_keys": []
+        },
+        "unity_opponent": {
+          "endpoint": "single_mode_free/unity_opponent",
+          "payload_keys": []
+        },
+        "unity_roster": {
+          "endpoint": "single_mode_free/unity_roster",
+          "payload_keys": []
+        }
+      },
+      "discriminators": [
+        "chara_info",
+        "free_data_set",
+        "home_info",
+        "race_condition_array",
+        "race_start_info",
+        "single_mode_finish_common",
+        "unchecked_event_array",
+        "ura_final_info",
+        "ura_goal_array"
+      ],
+      "endpoints": [
+        "single_mode_free/check_event",
+        "single_mode_free/load",
+        "single_mode_free/race_end",
+        "single_mode_free/race_entry",
+        "single_mode_free/race_out",
+        "single_mode_free/race_start"
+      ],
+      "fixture_files": [
+        "001_load_career.json",
+        "002_after_goal.json",
+        "002_race_entry.json",
+        "003_event_multi.json",
+        "003_race_start.json",
+        "004_friendship_train.json",
+        "004_race_end.json",
+        "005_race_continue.json",
+        "005_race_out.json",
+        "006_event_multi.json",
+        "006_skills.json",
+        "007_event_choice.json",
+        "007_final_finish.json",
+        "008_friendship_train.json",
+        "009_race_continue.json",
+        "010_skills.json",
+        "011_final_finish.json"
+      ],
+      "id": 1,
+      "name": "URA Finale",
+      "slug": "ura",
+      "state_kinds": [
+        "event",
+        "finish",
+        "home",
+        "race_running",
+        "race_select",
+        "ura"
+      ]
+    }
+  }
+}

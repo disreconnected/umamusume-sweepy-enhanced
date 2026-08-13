@@ -1,0 +1,124 @@
+{
+  "name": "011_shop",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 4,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 40,
+        "vital": 50,
+        "wiz": 100
+      },
+      "free_data_set": {
+        "coin_num": 200,
+        "item_effect_array": [],
+        "pick_up_item_info_array": [
+          {
+            "coin_num": 35,
+            "item_buy_num": 0,
+            "item_id": 2001,
+            "limit_buy_count": 3,
+            "limit_turn": 0,
+            "original_coin_num": 35,
+            "shop_item_id": 21
+          },
+          {
+            "coin_num": 40,
+            "item_buy_num": 0,
+            "item_id": 10001,
+            "limit_buy_count": 1,
+            "limit_turn": 0,
+            "original_coin_num": 40,
+            "shop_item_id": 22
+          },
+          {
+            "coin_num": 10,
+            "item_buy_num": 1,
+            "item_id": 3001,
+            "limit_buy_count": 1,
+            "limit_turn": 0,
+            "original_coin_num": 10,
+            "shop_item_id": 23
+          }
+        ],
+        "rival_race_info_array": [],
+        "user_item_info_array": [
+          {
+            "item_id": 2001,
+            "num": 1
+          },
+          {
+            "item_id": 10001,
+            "num": 1
+          }
+        ]
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": [
+          {
+            "command_group_id": 0,
+            "command_id": 101,
+            "command_type": 1,
+            "failure_rate": 20,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 1,
+                "value": 22
+              },
+              {
+                "target_type": 10,
+                "value": -10
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": [
+              1
+            ]
+          },
+          {
+            "command_group_id": 0,
+            "command_id": 701,
+            "command_type": 7,
+            "failure_rate": 0,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 10,
+                "value": 25
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          }
+        ]
+      }
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "ftrackblazer_viewer"
+    }
+  },
+  "scenario": "trackblazer"
+}

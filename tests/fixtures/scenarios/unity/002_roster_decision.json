@@ -1,0 +1,101 @@
+{
+  "name": "002_roster_decision",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 2,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 25,
+        "vital": 75,
+        "wiz": 100
+      },
+      "free_data_set": {
+        "coin_num": 0,
+        "item_effect_array": [],
+        "pick_up_item_info_array": [],
+        "rival_race_info_array": [],
+        "user_item_info_array": []
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": []
+      },
+      "unity_cup_info": {
+        "category": "",
+        "is_final": false,
+        "opponent_decision_required": false,
+        "opponent_program_id": 0,
+        "phase": "qualifying",
+        "result": 0,
+        "round": 1
+      },
+      "unity_spirit_info": {
+        "burst_array": [],
+        "burst_ready": false,
+        "gauge_array": []
+      },
+      "unity_team_info": {
+        "roster_decision_required": true,
+        "roster_slot_array": [
+          {
+            "category": "short",
+            "filled": false,
+            "slot": 1
+          },
+          {
+            "category": "mile",
+            "filled": false,
+            "slot": 2
+          }
+        ],
+        "team_member_array": [
+          {
+            "card_id": 100101,
+            "name": "Team A",
+            "position": 1,
+            "rank": 15,
+            "trained_chara_id": 100001
+          },
+          {
+            "card_id": 100202,
+            "name": "Team B",
+            "position": 2,
+            "rank": 12,
+            "trained_chara_id": 100002
+          },
+          {
+            "card_id": 100303,
+            "name": "Team C",
+            "position": 3,
+            "rank": 9,
+            "trained_chara_id": 100003
+          }
+        ],
+        "team_rank": 5
+      }
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "funity_viewer"
+    }
+  },
+  "scenario": "unity"
+}

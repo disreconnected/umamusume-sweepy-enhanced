@@ -498,6 +498,47 @@ class SkillBuyer:
         return state
 
 
+    def candidates_for_ids(self, state, selected_skill_ids, preset):
+        """Resolve the current server-built skill options for exactly the
+        selected skill ids. Returns candidate dicts in selection order; the
+        caller re-validates affordability and tips before executing."""
+        data = (state or {}).get("data") or {}
+        chara = data.get("chara_info") or data.get("single_mode_chara_light") or {}
+        if not chara:
+            return []
+        owned = {int(item.get("skill_id") or 0) for item in chara.get("skill_array") or []}
+        owned_groups = {self.skill_to_group_id.get(skill_id, skill_id // 10) for skill_id in owned}
+        priority = self._priority_context(preset or {})
+        blacklist = self._blacklist(preset or {})
+        wanted = {int(sid) for sid in (selected_skill_ids or [])}
+        by_skill_id = {}
+        for tip in chara.get("skill_tips_array") or []:
+            resolved = self.resolve_skill_tip(tip, owned, owned_groups, priority, blacklist, preset or {})
+            if not resolved or resolved.get("skip_reason"):
+                continue
+            skill_id = int(resolved.get("resolved_skill_id") or 0)
+            if skill_id not in wanted:
+                continue
+            by_skill_id[skill_id] = {
+                "skill_id": skill_id,
+                "group_id": resolved.get("group_id"),
+                "tip_rarity": resolved.get("tip_rarity"),
+                "hint_level": resolved.get("hint_level"),
+                "name": resolved.get("resolved_name"),
+                "priority": resolved.get("priority"),
+                "cost": resolved.get("cost"),
+                "bundled_skill_ids": resolved.get("bundled_skill_ids") or [],
+                "resolution_reason": resolved.get("resolution_reason"),
+                "failed_scope": resolved.get("failed_scope"),
+                "candidate_skill_ids": resolved.get("candidate_skill_ids"),
+            }
+        result = []
+        for sid in (selected_skill_ids or []):
+            sid = int(sid)
+            if sid in by_skill_id:
+                result.append(by_skill_id[sid])
+        return result
+
     def _select_skill_id(self, group_id, priority, owned, rarity=0):
         owned_groups = {self.skill_to_group_id.get(sid, sid // 10) for sid in owned}
         resolved = self.resolve_skill_tip({"group_id": group_id, "rarity": rarity, "level": 0}, set(owned), owned_groups, priority, set(), {})

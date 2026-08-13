@@ -11,7 +11,7 @@
         } catch (e) {}
     </script>
     <title>Sweepy改二</title>
-    <link rel="stylesheet" href="styles.css?v=27">
+    <link rel="stylesheet" href="styles.css?v=28">
 
 </head>
 <body>
@@ -33,20 +33,6 @@
 
             <div class="navbar-main">
                 <div id="account-strip" class="account-strip"></div>
-
-                <div id="turn-delay-control" class="turn-delay-control">
-                    <div class="delay-group">
-                        <span class="turn-delay-label">DELAY(S)</span>
-                        <input id="turn-delay-min" class="turn-delay-input" type="number" min="0" step="0.1" value="1.6">
-                        <span class="turn-delay-separator">–</span>
-                        <input id="turn-delay-max" class="turn-delay-input" type="number" min="0" step="0.1" value="3.7">
-                    </div>
-                    <div class="control-btns">
-                        <button id="tempt-fate-btn" class="btn btn-sm turn-delay-button" type="button">TEMPT FATE</button>
-                        <button id="burn-clocks-btn" class="btn btn-sm turn-delay-button" type="button">BURN CLOCKS: OFF</button>
-                        <button id="dev-career-btn" class="btn btn-sm turn-delay-button" type="button" style="display: none;">DEV</button>
-                    </div>
-                </div>
             </div>
 
             <div class="navbar-meta">
@@ -237,7 +223,11 @@
                                 </div>
                                 <div id="event-boost-status" class="event-boost-status"></div>
                             </div>
-                            <button id="start-career-btn" class="btn btn-primary" type="button" disabled>RUN CAREER</button>
+                            <div class="scenario-picker-row">
+                                <label class="form-label" for="scenario-picker">SCENARIO</label>
+                                <select id="scenario-picker" class="form-input master-data-input"></select>
+                            </div>
+                            <button id="start-career-btn" class="btn btn-primary" type="button" disabled>START CAREER</button>
                             <div id="advisor-panel" class="advisor-panel"></div>
                             <div id="start-status" class="start-status"></div>
                         </div>
@@ -466,6 +456,42 @@
                     <button class="panel-collapse-btn panel-collapse-btn-right" id="content-collapse-btn" type="button" data-panel-label="Library" title="Collapse library" aria-label="Collapse library"></button>
                 </div>
             </div>
+            <section id="player-panel" class="player-panel" style="display:none">
+                <div class="panel-header">
+                    <span class="panel-header-title">MANUAL PLAY</span>
+                    <div class="player-toolbar">
+                        <button id="player-refresh-btn" class="btn btn-sm" type="button">REFRESH STATE</button>
+                        <button id="player-finish-btn" class="btn btn-sm btn-primary" type="button" disabled>FINISH CAREER</button>
+                        <button id="player-delete-btn" class="btn btn-sm btn-danger" type="button" disabled>DELETE</button>
+                    </div>
+                </div>
+                <div class="player-body">
+                    <div id="player-summary" class="player-summary"></div>
+                    <div id="player-status" class="player-status"></div>
+                    <div id="player-recommendation" class="player-recommendation"></div>
+                    <div class="player-split">
+                        <div class="player-column">
+                            <div class="player-column-title">ACTIONS</div>
+                            <div id="player-actions" class="player-actions"></div>
+                        </div>
+                        <div class="player-column">
+                            <div class="player-column-title">SCENARIO</div>
+                            <div id="player-scenario" class="player-scenario"></div>
+                            <div class="player-skills-head">
+                                <span class="player-column-title">SKILLS</span>
+                                <button id="player-skill-btn" class="btn btn-sm" type="button">TOGGLE</button>
+                            </div>
+                            <div id="player-skill-panel" class="player-skill-panel" style="display:none">
+                                <div id="player-skill-list" class="player-skill-list"></div>
+                                <div class="player-skill-buy-row">
+                                    <span id="player-skill-cost" class="player-skill-cost">0 skills · 0 SP</span>
+                                    <button id="player-skill-buy" class="btn btn-sm btn-primary" type="button" disabled>PURCHASE SELECTED</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
         <div id="career-modal" class="modal-backdrop">
             <div class="modal-panel">
@@ -522,7 +548,7 @@
             </div>
         </div>
     </div>
-    <script src="app.js?v=27"></script>
+    <script src="app.js?v=28"></script>
 </body>
 </html>
 

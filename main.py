@@ -10,9 +10,9 @@ try:
 except Exception:
     pass
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
 from pathlib import Path
 import random
@@ -21,11 +21,13 @@ import threading
 import frida
 from career_bot import master_data
 from career_bot.presets import PresetStore
-from career_bot.runner import CareerRunner
+from career_bot.runner import CareerSession
+from career_bot.capture import CaptureRecorder
+from career_bot.scenarios.registry import supported_scenarios
 from career_bot import uma_moe_importer
 from career_bot import advisor
 from uma_api.client import UmaClient
-from career_bot.delay import GateKeeper, dna_sleep, dna_uniform
+from career_bot.delay import dna_sleep, dna_uniform
 
 PROCESS_NAME = "UmamusumePrettyDerby.exe"
 APP_ID = "3224770"
@@ -33,8 +35,14 @@ APP_ID = "3224770"
 JS_CODE = r'''
 'use strict';
 (function() {
+    // Per-connection reassembly buffers: requests (outbound) and responses
+    // (inbound) are tracked independently; a FIFO per TLS connection pairs
+    // each parsed request with the oldest subsequent response.
     var buffers = {};
+    var respBuffers = {};
+    var fifos = {};
     var attached = {};
+    var seq = 0;
     function hex2(n) { return ('0' + (n & 255).toString(16)).slice(-2); }
     function uuidFromHex(h) {
         return h.substring(0, 8) + '-' + h.substring(8, 12) + '-' + h.substring(12, 16) + '-' + h.substring(16, 20) + '-' + h.substring(20);
@@ -60,39 +68,40 @@ JS_CODE = r'''
     }
     function parseWire(endpoint, viewerId, body, appVer, resVer) {
         var decoded = b64(body);
-        if (decoded.length < 140) return;
+        if (decoded.length < 140) return null;
         var headerLen = decoded[0] | (decoded[1] << 8) | (decoded[2] << 16) | (decoded[3] << 24);
         var blob1End = 4 + headerLen;
-        if (headerLen < 120 || headerLen > 2048 || decoded.length < blob1End) return;
-        
+        if (headerLen < 120 || headerLen > 2048 || decoded.length < blob1End) return null;
+
         var udidHex = '';
         for (var i = blob1End - 96; i < blob1End - 80; i++) udidHex += hex2(decoded[i]);
         var authHex = '';
         for (var j = blob1End - 48; j < blob1End; j++) authHex += hex2(decoded[j]);
-        
-        if (!viewerId || !authHex || authHex.length < 64 || udidHex.length !== 32) return;
-        
-        send({
-            type: 'creds',
-            endpoint: endpoint,
+
+        if (!viewerId || !authHex || authHex.length < 64 || udidHex.length !== 32) return null;
+        return {
             viewer_id: parseInt(viewerId, 10),
             udid: uuidFromHex(udidHex),
             auth_key: authHex,
             auth_key_len: authHex.length / 2,
             app_ver: appVer,
-            res_ver: resVer,
-            body: body
-        });
+            res_ver: resVer
+        };
     }
     function parseHttp(text) {
-        if (text.indexOf('/umamusume/') < 0) return;
+        if (text.indexOf('/umamusume/') < 0) return null;
         var em = text.match(/POST\s+\/umamusume\/([^\s]+)\s+HTTP/i);
         var vm = text.match(/(?:^|\r\n)(?:ViewerID|ViewerId):\s*(\d+)/i);
         var appVer = text.match(/(?:^|\r\n)APP-VER:\s*([^\r\n]+)/i);
         var resVer = text.match(/(?:^|\r\n)RES-VER:\s*([^\r\n]+)/i);
         var idx = text.indexOf('\r\n\r\n');
-        if (!em || !vm || idx < 0) return;
-        parseWire(em[1], vm[1], text.substring(idx + 4), appVer ? appVer[1].trim() : '', resVer ? resVer[1].trim() : '');
+        if (!em || !vm || idx < 0) return null;
+        var wire = parseWire(em[1], vm[1], text.substring(idx + 4), appVer ? appVer[1].trim() : '', resVer ? resVer[1].trim() : '');
+        if (!wire) return null;
+        wire.type = 'creds';
+        wire.endpoint = em[1];
+        wire.body = text.substring(idx + 4);
+        return wire;
     }
     function parseChunk(key, chunk) {
         var buf = (buffers[key] || '') + chunk;
@@ -100,13 +109,13 @@ JS_CODE = r'''
         var start = buf.indexOf('POST ');
         if (start < 0) {
             buffers[key] = buf.slice(-4096);
-            return;
+            return null;
         }
         if (start > 0) buf = buf.substring(start);
         var headerEnd = buf.indexOf('\r\n\r\n');
         if (headerEnd < 0) {
             buffers[key] = buf;
-            return;
+            return null;
         }
         var headers = buf.substring(0, headerEnd);
         var lm = headers.match(/Content-Length:\s*(\d+)/i);
@@ -114,10 +123,37 @@ JS_CODE = r'''
         var total = headerEnd + 4 + length;
         if (length > 0 && buf.length < total) {
             buffers[key] = buf;
-            return;
+            return null;
         }
-        parseHttp(length > 0 ? buf.substring(0, total) : buf);
+        var http = parseHttp(length > 0 ? buf.substring(0, total) : buf);
         buffers[key] = buf.length > total ? buf.substring(total) : '';
+        return http;
+    }
+    function parseResponseChunk(key, chunk) {
+        var buf = (respBuffers[key] || '') + chunk;
+        if (buf.length > 4194304) buf = buf.substring(buf.length - 2097152);
+        var start = buf.indexOf('HTTP/');
+        if (start < 0) {
+            respBuffers[key] = buf.slice(-4096);
+            return null;
+        }
+        if (start > 0) buf = buf.substring(start);
+        var headerEnd = buf.indexOf('\r\n\r\n');
+        if (headerEnd < 0) {
+            respBuffers[key] = buf;
+            return null;
+        }
+        var headers = buf.substring(0, headerEnd);
+        var lm = headers.match(/Content-Length:\s*(\d+)/i);
+        var length = lm ? parseInt(lm[1], 10) : 0;
+        var total = headerEnd + 4 + length;
+        if (length > 0 && buf.length < total) {
+            respBuffers[key] = buf;
+            return null;
+        }
+        var body = length > 0 ? buf.substring(headerEnd + 4, headerEnd + 4 + length) : '';
+        respBuffers[key] = buf.length > total ? buf.substring(total) : '';
+        return body;
     }
     function hookTls() {
         var ga = Process.findModuleByName('GameAssembly.dll');
@@ -142,7 +178,9 @@ JS_CODE = r'''
         var iface = globalPtr.readPointer();
         if (!iface || iface.isNull()) return false;
         var hookedTls = 0;
-        [0xd0, 0xd8, 0xe0, 0xe8].forEach(function(off) {
+        // Candidate read+write callbacks share the (ctx, buf, len) layout;
+        // the parser detects direction from the payload prefix.
+        [0xc8, 0xd0, 0xd8, 0xe0, 0xe8].forEach(function(off) {
             var addr = iface.add(off).readPointer();
             if (!addr || addr.isNull()) return;
             var key = 'tls_' + addr.toString();
@@ -157,7 +195,39 @@ JS_CODE = r'''
                             var u8 = new Uint8Array(bytes);
                             var s = '';
                             for (var i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
-                            parseChunk(args[0].toString(), s);
+                            var conn = args[0].toString();
+                            if (s.indexOf('POST ') === 0 || s.indexOf('GET ') === 0 || s.indexOf('/umamusume/') >= 0) {
+                                var req = parseChunk(conn, s);
+                                if (req && req.endpoint) {
+                                    seq++;
+                                    var entry = {
+                                        endpoint: req.endpoint,
+                                        request_id: 'req_' + seq,
+                                        viewer_id: req.viewer_id,
+                                        udid: req.udid
+                                    };
+                                    if (!fifos[conn]) fifos[conn] = [];
+                                    fifos[conn].push(entry);
+                                    if (fifos[conn].length > 32) fifos[conn].shift();
+                                }
+                            } else if (s.indexOf('HTTP/') === 0) {
+                                var body = parseResponseChunk(conn, s);
+                                if (body !== null && body !== '') {
+                                    var pending = (fifos[conn] || []).shift();
+                                    if (pending) {
+                                        send({
+                                            type: 'http',
+                                            request_id: pending.request_id,
+                                            endpoint: pending.endpoint,
+                                            viewer_id: pending.viewer_id,
+                                            udid: pending.udid,
+                                            body: body
+                                        });
+                                    } else {
+                                        send({ type: 'http_unpaired', body: body.slice(0, 256) });
+                                    }
+                                }
+                            }
                         } catch (e) {}
                     }
                 });
@@ -182,6 +252,24 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = FastAPI()
 
+# Local single-user service: reject non-loopback clients and foreign Origins
+# on mutating /api/* requests. A missing Origin is allowed for same-machine
+# non-browser tooling.
+ALLOWED_ORIGINS = {"http://127.0.0.1:1616", "http://localhost:1616"}
+
+
+@app.middleware("http")
+async def local_boundary(request: Request, call_next):
+    client_host = (request.client.host if request.client else "") or ""
+    if client_host not in ("127.0.0.1", "::1", "localhost"):
+        return JSONResponse(status_code=403, content={"success": False, "detail": "non-loopback client rejected"})
+    if request.method in ("POST", "PUT", "PATCH", "DELETE") and request.url.path.startswith("/api/"):
+        origin = request.headers.get("origin")
+        if origin and origin not in ALLOWED_ORIGINS:
+            return JSONResponse(status_code=403, content={"success": False, "detail": "foreign origin rejected"})
+    return await call_next(request)
+
+
 chara_map = {}
 support_map = {}
 active_client = None
@@ -198,13 +286,8 @@ active_selection = {
     "trainee": None,
     "veterans": []
 }
-turn_delay_min_sec = 2.5
-turn_delay_max_sec = 5.0
-turn_delay_restore_min_sec = 2.5
-turn_delay_restore_max_sec = 5.0
-turn_delay_disabled = False
 preset_store = PresetStore(DIR)
-career_runner = CareerRunner(DIR)
+career_session = CareerSession(DIR)
 
 base_dir = Path(__file__).parent.absolute()
 master_data_startup_status = master_data.status(base_dir)
@@ -230,14 +313,13 @@ if support_path.exists():
 
 SESSION_CACHE_PATH = base_dir / 'data' / '.session_cache.json'
 LOCAL_DECKS_PATH = base_dir / 'data' / 'decks.json'
-SESSION_CACHE_WRITABLE_KEYS = ('selected_preset', 'steam_username', 'steam_password', 'proxy_url')
+SESSION_CACHE_WRITABLE_KEYS = ('selected_preset', 'steam_username', 'proxy_url')
 SESSION_CACHE_ALL_KEYS = (
     'viewer_id',
     'career',
     'selected_preset',
     'last_login_at',
     'steam_username',
-    'steam_password',
     'proxy_url',
 )
 
@@ -248,10 +330,26 @@ def _load_session_cache():
             return {}
         with open(SESSION_CACHE_PATH, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        return data if isinstance(data, dict) else {}
+        data = data if isinstance(data, dict) else {}
+        if "steam_password" in data or "saved_password" in data:
+            data.pop("steam_password", None)
+            data.pop("saved_password", None)
+            try:
+                _save_session_cache_raw(data)
+            except Exception:
+                pass
+        return data
     except Exception as e:
         print(f"session_cache: load failed: {e}")
         return {}
+
+
+def _save_session_cache_raw(cache):
+    SESSION_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = SESSION_CACHE_PATH.with_suffix('.json.tmp')
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, SESSION_CACHE_PATH)
 
 
 def _save_session_cache(updates):
@@ -261,11 +359,7 @@ def _save_session_cache(updates):
             if key not in SESSION_CACHE_ALL_KEYS:
                 continue
             cache[key] = value
-        SESSION_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = SESSION_CACHE_PATH.with_suffix('.json.tmp')
-        with open(tmp_path, 'w', encoding='utf-8') as f:
-            json.dump(cache, f, ensure_ascii=False, indent=2)
-        os.replace(tmp_path, SESSION_CACHE_PATH)
+        _save_session_cache_raw(cache)
         return cache
     except Exception as e:
         print(f"session_cache: save failed: {e}")
@@ -374,39 +468,6 @@ def _normalise_local_deck(raw, owned_by_id=None):
 
 def _local_decks_payload(owned_by_id=None):
     return [_normalise_local_deck(deck, owned_by_id) for deck in _read_local_decks()]
-
-
-def normalize_turn_delay(min_value, max_value, disabled=False):
-    left = max(0.0, float(min_value or 0.0))
-    right = max(0.0, float(max_value or 0.0))
-    if left > right:
-        right = left
-    if disabled:
-        left = 0.0
-        right = 0.0
-    return left, right, bool(disabled)
-
-def set_turn_delay(min_value, max_value, disabled=False):
-    import career_bot.delay as delay_module
-    next_min, next_max, next_disabled = normalize_turn_delay(min_value, max_value, disabled)
-    if not next_disabled:
-        delay_module.TURN_DELAY_RESTORE_MIN = next_min
-        delay_module.TURN_DELAY_RESTORE_MAX = next_max
-    delay_module.TURN_DELAY_MIN = next_min
-    delay_module.TURN_DELAY_MAX = next_max
-    delay_module.GLOBAL_DELAYS_DISABLED = next_disabled
-    return get_turn_delay()
-
-def get_turn_delay():
-    import career_bot.delay as delay_module
-    return {
-        "success": True,
-        "min": getattr(delay_module, "TURN_DELAY_MIN", 2.5),
-        "max": getattr(delay_module, "TURN_DELAY_MAX", 5.0),
-        "restore_min": getattr(delay_module, "TURN_DELAY_RESTORE_MIN", 2.5),
-        "restore_max": getattr(delay_module, "TURN_DELAY_RESTORE_MAX", 5.0),
-        "disabled": getattr(delay_module, "GLOBAL_DELAYS_DISABLED", False)
-    }
 
 
 def refresh_index_state(client, max_retries=3):
@@ -1104,15 +1165,13 @@ class LoginRequest(BaseModel):
 
 class DeleteCareerRequest(BaseModel):
     current_turn: int = 0
+    expected_revision: int = -1
 
 class FinishCareerRequest(BaseModel):
-    # Natural-finish (save the trained character) versus force-delete.
-    # Mirrors the runner's `decision.action == "finish"` recovery branch:
-    # spend leftover SP on skills, drain any residual events, then call
-    # single_mode_free/finish with is_force_delete=False.
+    # Natural-finish (save the trained character). Explicit only: leftover SP
+    # is spent through the skills drawer before finishing; no auto-buy.
     current_turn: int = 0
-    preset_name: str = ""
-    buy_skills: bool = True
+    expected_revision: int = -1
 
 class StartCareerRequest(BaseModel):
     card_id: int
@@ -1128,7 +1187,6 @@ class StartCareerRequest(BaseModel):
     difficulty: int = 0
     is_boost: int = 0
     boost_story_event_id: int = 0
-    burn_clocks: bool = False
     # 3rd inheritance slot: borrow a friend's veteran uma as an extra parent.
     # rental_viewer_id is the friend's viewer_id (uma.moe account_id), and
     # rental_chara_id is THAT veteran's trained_chara_id on the friend's account
@@ -1136,26 +1194,13 @@ class StartCareerRequest(BaseModel):
     rental_viewer_id: int = 0
     rental_chara_id: int = 0
 
-class RunCareerRequest(BaseModel):
-    card_id: int = 0
-    support_card_ids: list[int] = []
-    friend_viewer_id: int = 0
-    friend_card_id: int = 0
-    parent_id_1: int = 0
-    parent_id_2: int = 0
-    scenario_id: int = 0
-    deck_id: int = 1
-    use_tp: int = 30
-    difficulty_id: int = 0
-    difficulty: int = 0
-    is_boost: int = 0
-    boost_story_event_id: int = 0
-    preset_name: str = ""
-    rental_viewer_id: int = 0
-    rental_chara_id: int = 0
-    max_steps: int = 2500
-    burn_clocks: bool = False
-    dev_mode: bool = False
+class PlayActionRequest(BaseModel):
+    action_id: str
+    expected_revision: int = -1
+    selected_action_ids: list[str] = []
+
+class PlayRevisionRequest(BaseModel):
+    expected_revision: int | None = None
 
 class SaveRacesRequest(BaseModel):
     preset_name: str
@@ -1167,14 +1212,6 @@ class SavePresetRequest(BaseModel):
 class DeletePresetByNameRequest(BaseModel):
     name: str
 
-class CareerActionRequest(BaseModel):
-    command_type: int
-    command_id: int
-    current_turn: int
-    current_vital: int
-    command_group_id: int = 0
-    select_id: int = 0
-
 class FriendListRequest(BaseModel):
     exclude_viewer_ids: list[int] = []
     force_refresh: bool = False
@@ -1185,11 +1222,6 @@ class FriendManageRequest(BaseModel):
 class AdvisorRequest(BaseModel):
     trainee_card_id: int = 0
     running_style: int = 0
-
-class ApiDelayRequest(BaseModel):
-    min: float = 1.6
-    max: float = 4.0
-    disabled: bool = False
 
 class MasterDataPathRequest(BaseModel):
     master_mdb_path: str
@@ -1222,15 +1254,6 @@ class UmaMoeImportRequest(BaseModel):
     overwrite_supports: bool = True
     overwrite_trainee: bool = True
     overwrite_stats: bool = False
-
-@app.get("/api/settings/turn-delay")
-async def get_turn_delay_settings():
-    return get_turn_delay()
-
-@app.post("/api/settings/turn-delay")
-async def set_turn_delay_settings(req: ApiDelayRequest):
-    return set_turn_delay(req.min, req.max, req.disabled)
-
 
 # Event Boost (TP Usage x2) settings ------------------------------------------------
 # The active limited-time story event id changes every event period, so we cache
@@ -1663,10 +1686,10 @@ def apply_career_result(result):
     return account, chara_info
 
 @app.post("/api/login")
-async def login(req: LoginRequest):
+async def login(req: LoginRequest, response: Response):
     from uma_api.client import UmaClient, get_ticket
-    from career_bot.delay import GateKeeper
     global active_client, active_account, active_dashboard_data, active_start_state, active_parent_cards, active_parent_rank_points, pending_game_auth_config, raw_load_index_response, active_selection
+    response.headers["Cache-Control"] = "no-store"
     try:
         chara = None
         cfg = dict(pending_game_auth_config)
@@ -1685,16 +1708,35 @@ async def login(req: LoginRequest):
             "trainee": None,
             "veterans": []
         }
+        career_session.reset()
 
-        has_form_creds = bool(req.username and req.password)
         cache = _load_session_cache()
         proxy_url = req.proxy_url or cache.get('proxy_url', '')
+
+        # Steam password is never persisted; it is only the HWID seed and is
+        # consumed by the ticket request below (when credentials are entered).
+        cfg['steam_password_seed'] = req.password or ''
+        cfg['proxy_url'] = proxy_url
+
+        if os.environ.get("UMA_TEST_MODE") == "1":
+            # Fixture transport: no official game, no Steam ticket, no Frida.
+            active_client = FixtureClient()
+            active_account = active_client.account_status()
+            active_dashboard_data = active_client.dashboard_payload()
+            active_start_state = {}
+            _save_session_cache({
+                "viewer_id": 0,
+                "career": _career_snapshot_for_cache(active_account),
+                "last_login_at": datetime.now(timezone.utc).isoformat(),
+                "proxy_url": proxy_url,
+            })
+            return active_dashboard_data
 
         if req.steam_id and req.steam_session_ticket:
             sid = str(req.steam_id)
             tkt = str(req.steam_session_ticket)
             print('Using provided Steam ticket')
-        elif has_form_creds:
+        elif req.username and req.password:
             sid, tkt = get_ticket(req.username, req.password, req.code, proxy_url)
         else:
             raise Exception('Steam credentials required')
@@ -1704,8 +1746,6 @@ async def login(req: LoginRequest):
                 'steam_id': sid,
                 'steam_session_ticket': tkt,
             })
-        cfg['steam_password_seed'] = req.password
-        cfg['proxy_url'] = proxy_url
         if not has_fresh_auth_config(cfg):
             raise Exception('Fresh in-game auth capture required; switch to the target in-game account, restart capture, then login again')
 
@@ -1713,14 +1753,16 @@ async def login(req: LoginRequest):
         print(f"Using Frida-captured viewer_id: {cfg.get('viewer_id')}")
 
         cfg['steam_username'] = target_username
-        cfg['steam_password'] = req.password or cache.get('steam_password')
 
+        # One direct UmaClient; the client's explicit login sleeps and the
+        # 140 ms transport floor remain, but GateKeeper's human-simulation
+        # pacing leaves the play path. The session lock is the only
+        # concurrency authority.
         c = UmaClient(cfg, trace_enabled=False)
-        gated_client = GateKeeper(c)
-        res = gated_client.login()
+        res = c.login()
         if not res:
             raise HTTPException(status_code=401, detail="Game login failed")
-        active_client = gated_client
+        active_client = c
 
         d = res.get('data', {})
         career_data = None
@@ -1922,13 +1964,13 @@ async def update_selection(req: UISelectionRequest):
 class SessionCacheUpdateRequest(BaseModel):
     selected_preset: str | None = None
     steam_username: str | None = None
-    steam_password: str | None = None
     proxy_url: str | None = None
 
 
 @app.get("/api/session-cache")
 async def get_session_cache():
-    """Return the persisted UI-context cache. Safe to call before login."""
+    """Return the persisted UI-context cache. Safe to call before login.
+    Never contains credentials."""
     return {"success": True, "cache": _load_session_cache()}
 
 
@@ -1936,16 +1978,14 @@ async def get_session_cache():
 async def update_session_cache(req: SessionCacheUpdateRequest):
     """Persist a small whitelist of UI hints across server restarts.
 
-    Auth and game state are NOT touched. Only fields in
-    SESSION_CACHE_WRITABLE_KEYS can be written from the client.
+    Auth and game state are NOT touched; steam_password is never accepted.
+    Only fields in SESSION_CACHE_WRITABLE_KEYS can be written from the client.
     """
     updates = {}
     if req.selected_preset is not None:
         updates["selected_preset"] = req.selected_preset
     if req.steam_username is not None:
         updates["steam_username"] = req.steam_username
-    if req.steam_password is not None:
-        updates["steam_password"] = req.steam_password
     if req.proxy_url is not None:
         updates["proxy_url"] = req.proxy_url
     cache = _save_session_cache(updates) if updates else _load_session_cache()
@@ -1968,197 +2008,184 @@ async def logout():
         "trainee": None,
         "veterans": []
     }
+    career_session.reset()
     return {"success": True}
 
 @app.post("/api/career/start")
-async def start_career(req: StartCareerRequest):
+async def start_career(req: StartCareerRequest, response: Response):
+    """Start a career, load it into the session, and return the state
+    envelope (fresh careers start at revision 0)."""
+    response.headers["Cache-Control"] = "no-store"
+    if not active_client:
+        raise HTTPException(status_code=401, detail="Not logged in")
     try:
         started = start_career_from_request(req)
         if not started.get("success"):
             return started
         account, chara_info = apply_career_result(started["result"])
-        return {"success": True, "account": account, "chara_info": chara_info}
+        preset = _preset_for_career(account.get("career") or {})
+        try:
+            state = career_session.load(active_client, preset)
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"load after start failed: {exc}")
+        if active_dashboard_data:
+            active_dashboard_data["account"] = account
+        return {"success": True, "state": state, "account": account}
+    except HTTPException:
+        raise
     except Exception as e:
         return {"success": False, "detail": str(e)}
 
-backend_loop_thread = None
-backend_loop_stop = False
 
-def manage_career_loop(req, preset, initial_result):
-    global backend_loop_stop, active_account, active_client
-    max_steps = max(1, min(int(req.max_steps or 2500), 3000))
-    consecutive_fails = 0
-    current_result = initial_result
-    
-    while not backend_loop_stop:
-        career_runner.start(active_client, preset, current_result, max_steps, burn_clocks=req.burn_clocks, dev_mode=req.dev_mode)
-        
-        while career_runner.snapshot().get("running"):
-            if backend_loop_stop:
-                career_runner.stop()
-                return
-            dna_sleep(1.0, 1.0)
-            
-        status = career_runner.snapshot()
-        if status.get("last_error"):
-            consecutive_fails += 1
-            if consecutive_fails >= 3:
-                break
-        else:
-            consecutive_fails = 0
-            if active_account and "career" in active_account and active_account["career"]:
-                active_account["career"]["active"] = False
-            
-        if not req.dev_mode:
-            break
-            
-        for _ in range(6):
-            if backend_loop_stop:
-                return
-            dna_sleep(1.0, 1.0)
-            
-        started_ok = False
-        while not started_ok and not backend_loop_stop:
-            try:
-                started = start_career_from_request(req)
-                if not started.get("success"):
-                    consecutive_fails += 1
-                    if consecutive_fails >= 5:
-                        break
-                    for _ in range(15):
-                        if backend_loop_stop:
-                            return
-                        dna_sleep(1.0, 1.0)
-                    continue
-                current_result = started["result"]
-                account, chara_info = apply_career_result(current_result)
-                active_account = account
-                started_ok = True
-                consecutive_fails = 0
-            except Exception as e:
-                consecutive_fails += 1
-                if consecutive_fails >= 5:
-                    break
-                for _ in range(15):
-                    if backend_loop_stop:
-                        return
-                    dna_sleep(1.0, 1.0)
+# ---------------------------------------------------------------------------
+# Manual play API (single serialized session; no autoplay runner)
+# ---------------------------------------------------------------------------
 
-        if not started_ok:
-            break
+def _require_client():
+    if not active_client:
+        raise HTTPException(status_code=401, detail="Not logged in")
 
-@app.post("/api/career/run")
-async def run_career(req: RunCareerRequest):
-    global active_account, backend_loop_thread
-    if career_runner.snapshot().get("running") or (backend_loop_thread and backend_loop_thread.is_alive()):
-        return {"success": False, "detail": "Career runner loop already active"}
-    preset_name = req.preset_name or "xguri parent"
-    preset = preset_store.read_one(preset_name)
+
+def _preset_for_career(career):
+    preset_name = _load_session_cache().get("selected_preset") or ""
+    preset = preset_store.read_one(preset_name) if preset_name else None
     if not preset:
-        return {"success": False, "detail": f"{preset_name} preset missing"}
-    
+        preset = {"scenario_id": int((career or {}).get("scenario_id") or 4)}
+    return preset
+
+
+def _play_result(result):
+    """Map a CareerSession result envelope onto the documented status policy:
+    409 stale revision, 422 absent/disabled action, 502 upstream failure —
+    each carrying the fresh snapshot for the UI to re-render."""
+    error = result.get("error")
+    if not error:
+        return {"success": True, "state": result.get("state")}
+    if error == "stale_revision":
+        status = 409
+    elif error in ("unknown_action", "action_disabled", "invalid_selection", "not_captured"):
+        status = 422
+    else:
+        status = 502
+    return JSONResponse(
+        status_code=status,
+        content={
+            "success": False,
+            "error": error,
+            "detail": result.get("detail"),
+            "state": result.get("state"),
+        },
+    )
+
+
+@app.get("/api/play/scenarios")
+async def play_scenarios():
+    """Supported scenario rows from the captured registry (start selector)."""
+    return {"success": True, "scenarios": supported_scenarios()}
+
+
+@app.get("/api/play/state")
+async def play_state(response: Response):
+    """Current session snapshot, or load_career() when the session is empty."""
+    response.headers["Cache-Control"] = "no-store"
+    _require_client()
+    if career_session.raw_state is not None:
+        return {"success": True, "state": career_session.snapshot()}
+    account = active_account or {}
+    career = account.get("career") or {}
+    if not career.get("active"):
+        return {"success": False, "detail": "No active career"}
     try:
-        account = active_account or {}
-        career = account.get("career") or {}
-        if career.get("active"):
-            index_result = refresh_index_state(active_client)
-            load_data = index_result.get('data', {})
-            update_start_state(load_data)
+        state = career_session.load(active_client, _preset_for_career(career))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    return {"success": True, "state": state}
 
-            account = get_account_status(load_data)
-            active_account = account
-            career = account.get("career") or {}
 
-        if career.get("active"):
-            career_result = active_client.load_career()
-            career_data = career_result.get('data', {})
-            
-            account = get_account_status(load_data, career_result)
-            active_account = account
-            
-            career_status = account.get("career")
-            req.card_id = int(career_status.get("card_id"))
-            req.support_card_ids = career_status.get("support_card_ids")
-            req.friend_viewer_id = int(career_status.get("friend_viewer_id"))
-            req.friend_card_id = int(career_status.get("friend_card_id"))
-            req.parent_id_1 = int(career_status.get("parent_id_1"))
-            req.parent_id_2 = int(career_status.get("parent_id_2"))
-            req.deck_id = int(career_status.get("deck_id"))
-            req.scenario_id = int(career_status.get("scenario_id") or preset.get("scenario_id", 4))
-            
-            chara_info = career_data.get('chara_info') or {}
+@app.post("/api/play/action")
+async def play_action(req: PlayActionRequest, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    _require_client()
+    if career_session.raw_state is None:
+        return JSONResponse(status_code=409, content={"success": False, "detail": "no active session; call /api/play/state"})
+    result = career_session.act(
+        active_client,
+        {"id": req.action_id},
+        req.expected_revision,
+        selection=req.selected_action_ids,
+    )
+    payload = _play_result(result)
+    if isinstance(payload, dict) and payload.get("success") and req.action_id == "finish":
+        # the finish action is terminal: refresh the account so a new career
+        # can be started without a relogin
+        _refresh_account_after_career()
+        payload["account"] = active_account
+    return payload
+
+
+@app.post("/api/play/refresh")
+async def play_refresh(req: PlayRevisionRequest, response: Response):
+    """Reload authoritative career state (stale-tab recovery)."""
+    response.headers["Cache-Control"] = "no-store"
+    _require_client()
+    if career_session.raw_state is None:
+        return JSONResponse(status_code=409, content={"success": False, "detail": "no active session; call /api/play/state"})
+    try:
+        state = career_session.load(active_client, career_session.preset)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    return {"success": True, "state": state}
+
+
+@app.post("/api/career/finish")
+async def finish_career_endpoint(req: FinishCareerRequest, response: Response):
+    """Explicit natural finish (saves the trained character). SP is spent
+    through the skills drawer before finishing; no automatic purchase."""
+    response.headers["Cache-Control"] = "no-store"
+    _require_client()
+    if career_session.raw_state is None:
+        return JSONResponse(status_code=409, content={"success": False, "detail": "no active session; call /api/play/state"})
+    result = career_session.finish(active_client, req.expected_revision)
+    payload = _play_result(result)
+    if isinstance(payload, JSONResponse):
+        return payload
+    if payload.get("success"):
+        _refresh_account_after_career()
+    return payload
+
+
+@app.post("/api/career/delete")
+async def delete_career(req: DeleteCareerRequest, response: Response):
+    """Explicit force-delete of the active career."""
+    response.headers["Cache-Control"] = "no-store"
+    _require_client()
+    if career_session.raw_state is None:
+        return JSONResponse(status_code=409, content={"success": False, "detail": "no active session; call /api/play/state"})
+    result = career_session.delete(active_client, req.expected_revision)
+    payload = _play_result(result)
+    if isinstance(payload, JSONResponse):
+        return payload
+    if payload.get("success"):
+        _refresh_account_after_career()
+    return payload
+
+
+def _refresh_account_after_career():
+    global active_account, active_dashboard_data
+    try:
+        load_result = refresh_index_state(active_client)
+        load_data = load_result.get("data", {})
+        update_start_state(load_data)
+        account = get_account_status(load_data)
+        active_account = account
+        if active_dashboard_data:
+            active_dashboard_data["account"] = account
+    except Exception:
+        if active_account:
+            active_account["career"] = None
             if active_dashboard_data:
-                active_dashboard_data["account"] = account
-            result = career_result
-        else:
-            if not req.scenario_id:
-                req.scenario_id = int(preset.get("scenario_id", 4))
-            # Auto-fill team picks from preset (e.g. when imported from uma.moe)
-            # unless the UI already specified them.
-            if not req.card_id and preset.get("trainee_card_id"):
-                req.card_id = int(preset["trainee_card_id"])
-            if not req.support_card_ids and preset.get("support_card_ids"):
-                req.support_card_ids = [int(c) for c in preset["support_card_ids"]]
-            if not req.friend_card_id and preset.get("friend_card_id"):
-                req.friend_card_id = int(preset["friend_card_id"])
-            if not req.friend_viewer_id and preset.get("friend_viewer_id"):
-                req.friend_viewer_id = int(preset["friend_viewer_id"])
-            if not req.parent_id_1 and preset.get("parent_id_1"):
-                req.parent_id_1 = int(preset["parent_id_1"])
-            if not req.parent_id_2 and preset.get("parent_id_2"):
-                req.parent_id_2 = int(preset["parent_id_2"])
-            if not req.rental_viewer_id and not req.rental_chara_id:
-                preset_rvid = preset.get("rental_chara_viewer_id")
-                preset_rcid = preset.get("rental_chara_id")
-                if preset_rvid and preset_rcid:
-                    req.rental_viewer_id = int(preset_rvid)
-                    req.rental_chara_id = int(preset_rcid)
-            started = start_career_from_request(req)
-            if not started.get("success"):
-                return started
-            result = started["result"]
-            account, chara_info = apply_career_result(result)
+                active_dashboard_data["account"] = active_account
 
-        preset = dict(preset)
-        apply_deck_type_counts(preset, req=req, chara_info=chara_info)
-        preset, runtime_advisor = prepare_runtime_preset_for_run(preset, req, chara_info)
-        
-        if req.dev_mode:
-            backend_loop_stop = False
-            backend_loop_thread = threading.Thread(target=manage_career_loop, args=(req, preset, result), daemon=True)
-            backend_loop_thread.start()
-            dna_sleep(0.5, 0.5)
-        else:
-            career_runner.start(active_client, preset, result, max(1, min(int(req.max_steps or 2500), 3000)), burn_clocks=req.burn_clocks, dev_mode=req.dev_mode)
-            
-        return {
-            "success": True,
-            "account": account,
-            "chara_info": chara_info,
-            "runner": career_runner.snapshot(),
-            "runtime_advisor": runtime_advisor,
-        }
-    except Exception as e:
-        return {"success": False, "detail": str(e)}
-
-@app.get("/api/career/runner")
-async def career_runner_status():
-    return {"success": True, "runner": career_runner.snapshot()}
-
-@app.post("/api/career/runner/stop")
-async def stop_career_runner():
-    global backend_loop_stop
-    backend_loop_stop = True
-    career_runner.stop()
-    return {"success": True, "runner": career_runner.snapshot()}
-
-class BurnClocksRequest(BaseModel):
-    burn_clocks: bool
-
-@app.post("/api/career/runner/burn_clocks")
-async def set_burn_clocks(req: BurnClocksRequest):
-    career_runner.set_burn_clocks(req.burn_clocks)
-    return {"success": True, "runner": career_runner.snapshot()}
 
 @app.post("/api/career/friends")
 async def get_friend_list(req: FriendListRequest):
@@ -2355,174 +2382,6 @@ async def advisor_recommendations(req: AdvisorRequest):
         "running_style": running_style,
         "recommendations": candidates[:24],
     }
-
-
-@app.post("/api/career/action")
-async def career_action(req: CareerActionRequest):
-    global active_client, active_account
-    if not active_client:
-        return {"success": False, "detail": "Not logged in"}
-    
-    try:
-        result = active_client.exec_command(
-            command_type=req.command_type,
-            command_id=req.command_id,
-            current_turn=req.current_turn,
-            current_vital=req.current_vital,
-            command_group_id=req.command_group_id,
-            select_id=req.select_id
-        )
-        
-        data = result.get('data', {})
-        return {
-            "success": True,
-            "chara_info": data.get('chara_info', {}),
-            "command_result": data.get('command_result', {})
-        }
-    except Exception as e:
-        return {"success": False, "detail": str(e)}
-
-@app.post("/api/career/delete")
-async def delete_career(req: DeleteCareerRequest):
-    global active_client, active_account, active_dashboard_data, backend_loop_thread
-    if not active_client:
-        return {"success": False, "detail": "Not logged in"}
-    if career_runner.snapshot().get("running") or (backend_loop_thread and backend_loop_thread.is_alive()):
-        return {"success": False, "detail": "Cannot delete career while runner is active"}
-
-    try:
-        account = active_account or {}
-        career = account.get("career") or {}
-        if not career.get("active"):
-            load_result = refresh_index_state(active_client)
-            load_data = load_result.get('data', {})
-            update_start_state(load_data)
-            account = get_account_status(load_data)
-            active_account = account
-            career = account.get("career") or {}
-        current_turn = req.current_turn or career.get("turn", 0) or 1
-        if not career.get("active") and not req.current_turn:
-            return {"success": False, "detail": "No active career"}
-        active_client.finish_career(current_turn=current_turn, is_force_delete=True)
-        account["career"] = None
-        active_account = account
-        if active_dashboard_data:
-            active_dashboard_data["account"] = account
-        return {"success": True, "account": account}
-    except Exception as e:
-        return {"success": False, "detail": str(e)}
-
-
-@app.post("/api/career/finish")
-async def finish_career_endpoint(req: FinishCareerRequest):
-    """Natural-finish the active career: spend leftover SP on skills (per
-    preset rules), drain any pending end-of-run events, then call
-    single_mode_free/finish with is_force_delete=False so the trained
-    character is saved.
-
-    This mirrors `CareerRunner._run`'s `decision.action == "finish"` path
-    so users can wrap up a career from the dashboard without logging into
-    the game client themselves.
-
-    Title selection is server-driven (awarded automatically based on the
-    run's results) so there is no separate "pick title" API to call.
-    """
-    global active_client, active_account, active_dashboard_data, backend_loop_thread
-    if not active_client:
-        return {"success": False, "detail": "Not logged in"}
-    if career_runner.snapshot().get("running") or (backend_loop_thread and backend_loop_thread.is_alive()):
-        return {"success": False, "detail": "Cannot finish career while runner is active"}
-
-    try:
-        account = active_account or {}
-        career = account.get("career") or {}
-        if not career.get("active"):
-            load_result = refresh_index_state(active_client)
-            load_data = load_result.get('data', {})
-            update_start_state(load_data)
-            account = get_account_status(load_data)
-            active_account = account
-            career = account.get("career") or {}
-        if not career.get("active"):
-            return {"success": False, "detail": "No active career"}
-
-        career_state = active_client.load_career()
-        career_data = career_state.get("data") or {}
-        chara_info = career_data.get("chara_info") or {}
-        current_turn = (
-            req.current_turn
-            or int(chara_info.get("turn") or 0)
-            or int(career.get("turn") or 0)
-            or 1
-        )
-        sp_before = int(chara_info.get("skill_point") or 0)
-
-        preset_name = req.preset_name or _load_session_cache().get("selected_preset") or ""
-        preset = preset_store.read_one(preset_name) if preset_name else None
-        if not preset:
-            preset = {"scenario_id": int(career.get("scenario_id") or 4)}
-
-        from career_bot.scenarios.mant import MantStrategy
-        from career_bot.races import RacePlanner
-
-        race_planner = RacePlanner(base_dir)
-        strategy = MantStrategy(race_planner)
-        skill_buyer = career_runner.skill_buyer
-
-        skills_bought_total = 0
-        if req.buy_skills:
-            career_state, bought = skill_buyer.buy(active_client, career_state, preset, force=True)
-            skills_bought_total += int(bought or 0)
-
-        career_data = career_state.get("data") or {}
-        if career_data.get("race_start_info"):
-            try:
-                career_state = active_client.race_out(current_turn=current_turn)
-            except Exception as e:
-                if not any(err in str(e) for err in ("102", "201", "StateRecoveryError")):
-                    raise
-
-        career_state = career_runner._drain_events(active_client, strategy, career_state, limit=50)
-        career_data = career_state.get("data") or {}
-        chara_info = career_data.get("chara_info") or {}
-
-        if req.buy_skills and int(chara_info.get("skill_point") or 0) > 200:
-            career_state, bought2 = skill_buyer.buy(active_client, career_state, preset, force=True)
-            skills_bought_total += int(bought2 or 0)
-            career_data = career_state.get("data") or {}
-            chara_info = career_data.get("chara_info") or {}
-
-        try:
-            active_client.finish_career(current_turn=current_turn, is_force_delete=False)
-        except Exception as e:
-            if not any(err in str(e) for err in ("102", "201", "StateRecoveryError")):
-                raise
-
-        try:
-            load_result = refresh_index_state(active_client)
-            load_data = load_result.get("data", {})
-            update_start_state(load_data)
-            account = get_account_status(load_data)
-            active_account = account
-            if active_dashboard_data:
-                active_dashboard_data["account"] = account
-        except Exception:
-            account["career"] = None
-            active_account = account
-            if active_dashboard_data:
-                active_dashboard_data["account"] = account
-
-        sp_after = int(chara_info.get("skill_point") or 0)
-        return {
-            "success": True,
-            "account": active_account,
-            "skills_bought": skills_bought_total,
-            "sp_before": sp_before,
-            "sp_after": sp_after,
-            "preset_name": preset_name,
-        }
-    except Exception as e:
-        return {"success": False, "detail": str(e)}
 
 
 @app.get("/api/debug/start_state")
@@ -2773,8 +2632,228 @@ def refresh_auth_before_serving(timeout_sec=None):
     return False
 
 
+class FixtureClient:
+    """Test-only transport selected when UMA_TEST_MODE=1 and
+    UMA_FIXTURE_SCENARIO=<slug>. Replays sanitized fixtures in order so the
+    compact dashboard can be smoke-tested without the official game."""
+
+    def __init__(self):
+        self.slug = os.environ.get("UMA_FIXTURE_SCENARIO") or "trackblazer"
+        fixture_dir = Path(__file__).parent / "tests" / "fixtures" / "scenarios" / self.slug
+        self.fixtures = []
+        if fixture_dir.exists():
+            for f in sorted(fixture_dir.glob("*.json")):
+                try:
+                    self.fixtures.append(json.loads(f.read_text(encoding="utf-8")))
+                except (ValueError, OSError):
+                    continue
+        self.index = 0
+        self.viewer_id = 1
+        self.current_scenario_id = 0
+        self.tp_info = {}
+        self.coin_info = {}
+        self.item_map = {}
+        self._finished = False
+
+    def _envelope(self):
+        return {"data": {}, "data_headers": {"result_code": 1}}
+
+    def _response(self, index):
+        if not self.fixtures:
+            return self._envelope()
+        return self.fixtures[min(index, len(self.fixtures) - 1)]["response"]
+
+    def _next(self):
+        if not self.fixtures:
+            return self._envelope()
+        if self.index < len(self.fixtures) - 1:
+            self.index += 1
+        return self._response(self.index)
+
+    def _current(self):
+        return self._response(self.index)
+
+    def call(self, ep, args=None):
+        return self._next()
+
+    def load_career(self):
+        return self._current()
+
+    def login(self):
+        return self._current()
+
+    def read_info(self):
+        return self._current()
+
+    def exec_command(self, **kwargs):
+        return self._next()
+
+    def check_event(self, **kwargs):
+        return self._next()
+
+    def race_entry(self, **kwargs):
+        if kwargs.get("running_style") is not None:
+            # a running-style tweak does not change the entered-race state
+            return self._current()
+        return self._next()
+
+    def race_start(self, **kwargs):
+        return self._next()
+
+    def race_end(self, **kwargs):
+        return self._next()
+
+    def race_out(self, **kwargs):
+        return self._next()
+
+    def race_continue(self, **kwargs):
+        return self._next()
+
+    def gain_skills(self, gain_skill_info_array, current_turn):
+        return self._next()
+
+    def use_items(self, use_item_info_array, current_turn):
+        return self._next()
+
+    def exchange_items(self, exchange_item_info_array, current_turn):
+        return self._next()
+
+    def minigame_end(self, **kwargs):
+        return self._next()
+
+    def finish_career(self, **kwargs):
+        self._finished = True
+        return self._next()
+
+    def account_status(self):
+        data = self._response(0).get("data") or {}
+        chara = data.get("chara_info") or {}
+        active = bool(chara.get("scenario_id")) and not self._finished
+        return {
+            "tp": {"current": 100, "max": 100},
+            "carrots": {"free": 0, "paid": 0, "total": 0},
+            "gold": 0,
+            "clocks": 0,
+            "career": {
+                "active": active,
+                "card_id": chara.get("card_id") or 0,
+                "name": "Fixture Career",
+                "turn": chara.get("turn") or 1,
+                "scenario_id": chara.get("scenario_id") or 0,
+                "fans": chara.get("fans") or 0,
+                "vital": chara.get("vital") or 0,
+                "max_vital": chara.get("max_vital") or 100,
+            },
+        }
+
+    def dashboard_payload(self):
+        return {
+            "success": True,
+            "account": self.account_status(),
+            "umas": [],
+            "supports": [],
+            "decks": [],
+            "parents": [],
+            "friends": [],
+            "friendVeterans": [],
+        }
+
+
+CAPTURE_SCENARIOS = {"ura", "unity", "trackblazer", "grand_concert"}
+
+
+def run_capture_mode(scenario_slug, timeout_sec=600):
+    """Dedicated protocol-capture lifecycle: launch the game, hook the TLS
+    read+write callbacks, record request/response pairs under
+    UMA_RUNTIME_DIR/captures/raw/<scenario>/, and leave the game running.
+    Mutually exclusive with the normal web-control session."""
+    if scenario_slug not in CAPTURE_SCENARIOS:
+        print(f"unknown scenario {scenario_slug!r}; expected one of {sorted(CAPTURE_SCENARIOS)}", flush=True)
+        return False
+    print(f"[CAPTURE MODE] scenario={scenario_slug}; capturing career protocol. "
+          "Drive the career in the game; records are redacted before write.", flush=True)
+    if not launch_game():
+        print("failed to launch the game via Steam", flush=True)
+        return False
+    recorder = CaptureRecorder(scenario_slug)
+    session = None
+    deadline = time.time() + timeout_sec
+
+    def on_message(message, data):
+        if message.get("type") == "error":
+            print(f"Frida Error: {message.get('description')}", flush=True)
+            return
+        payload = message.get("payload") or {}
+        mtype = payload.get("type")
+        if mtype == "creds":
+            recorder.write({"kind": "creds", "payload": payload})
+            return
+        if mtype == "http":
+            try:
+                from uma_api.client import unpack
+                body = str(payload.get("body") or "").strip()
+                if not body:
+                    return
+                response = unpack(body, payload.get("udid") or "")
+                recorder.write({
+                    "kind": "http",
+                    "request": {
+                        "endpoint": payload.get("endpoint"),
+                        "request_id": payload.get("request_id"),
+                        "viewer_id": payload.get("viewer_id"),
+                    },
+                    "response": response,
+                })
+                endpoint = str(payload.get("endpoint") or "")
+                if endpoint.startswith("single_mode_free/"):
+                    print(f"  captured {endpoint} (record {recorder.count})", flush=True)
+            except Exception as exc:
+                recorder.write({"kind": "http_unpaired", "detail": str(exc)[:200]})
+        elif mtype == "http_unpaired":
+            recorder.ambiguous += 1
+
+    while time.time() < deadline:
+        try:
+            session = frida.attach(PROCESS_NAME)
+            break
+        except Exception:
+            dna_sleep(1.0, 1.0)
+    if not session:
+        print(f"{PROCESS_NAME} not found within timeout; is the game running?", flush=True)
+        return False
+    try:
+        script = session.create_script(JS_CODE)
+        script.on("message", on_message)
+        script.load()
+        print(f"capturing to {recorder.path} (Ctrl+C or {int(timeout_sec)}s timeout)", flush=True)
+        while time.time() < deadline:
+            dna_sleep(1.0, 1.0)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if session:
+            try:
+                session.detach()
+            except Exception:
+                pass
+    print(
+        f"capture finished: {recorder.count} records, {recorder.ambiguous} unpaired "
+        "(the game was left running; run `python -m career_bot.capture sanitize "
+        "<raw.jsonl> --scenario <slug>` to build fixtures)",
+        flush=True,
+    )
+    return True
+
+
 if __name__ == "__main__":
     import uvicorn
+
+    args = sys.argv[1:]
+    if "--capture-scenario" in args:
+        idx = args.index("--capture-scenario")
+        slug = args[idx + 1] if idx + 1 < len(args) else ""
+        timeout = int(os.environ.get("SWEEPY_CAPTURE_TIMEOUT_SEC", "600"))
+        sys.exit(0 if run_capture_mode(slug, timeout) else 1)
 
     try:
         subprocess.run(["git", "pull"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -2783,7 +2862,8 @@ if __name__ == "__main__":
 
     set_console_topmost()
     kill_listeners_on_port(1616)
-    if not refresh_auth_before_serving():
-        raise SystemExit(1)
+    if os.environ.get("UMA_TEST_MODE") != "1":
+        if not refresh_auth_before_serving():
+            raise SystemExit(1)
     print("Access the Web UI at: http://127.0.0.1:1616", flush=True)
     uvicorn.run(app, host="127.0.0.1", port=1616, log_level="error")

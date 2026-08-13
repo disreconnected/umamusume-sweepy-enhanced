@@ -1,0 +1,198 @@
+{
+  "name": "001_load_career",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [
+          {
+            "evaluation": 75,
+            "is_outing": 0,
+            "story_step": 2,
+            "target_id": 1
+          },
+          {
+            "evaluation": 40,
+            "is_outing": 0,
+            "story_step": 1,
+            "target_id": 2
+          }
+        ],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 4,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [
+          {
+            "group_id": 20001,
+            "level": 2,
+            "rarity": 1
+          },
+          {
+            "group_id": 20008,
+            "level": 2,
+            "rarity": 1
+          }
+        ],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 12,
+        "vital": 80,
+        "wiz": 100
+      },
+      "free_data_set": {
+        "coin_num": 120,
+        "item_effect_array": [],
+        "pick_up_item_info_array": [
+          {
+            "coin_num": 35,
+            "item_buy_num": 0,
+            "item_id": 2001,
+            "limit_buy_count": 3,
+            "limit_turn": 0,
+            "original_coin_num": 35,
+            "shop_item_id": 11
+          },
+          {
+            "coin_num": 10,
+            "item_buy_num": 0,
+            "item_id": 3001,
+            "limit_buy_count": 1,
+            "limit_turn": 0,
+            "original_coin_num": 10,
+            "shop_item_id": 12
+          }
+        ],
+        "rival_race_info_array": [
+          {
+            "chara_id": 100202,
+            "program_id": 10101
+          }
+        ],
+        "user_item_info_array": [
+          {
+            "item_id": 2001,
+            "num": 2
+          },
+          {
+            "item_id": 10001,
+            "num": 1
+          }
+        ]
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": [
+          {
+            "command_group_id": 0,
+            "command_id": 101,
+            "command_type": 1,
+            "failure_rate": 20,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 1,
+                "value": 25
+              },
+              {
+                "target_type": 3,
+                "value": 10
+              },
+              {
+                "target_type": 10,
+                "value": -10
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": [
+              1,
+              2
+            ]
+          },
+          {
+            "command_group_id": 0,
+            "command_id": 103,
+            "command_type": 1,
+            "failure_rate": 10,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 3,
+                "value": 12
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          },
+          {
+            "command_group_id": 0,
+            "command_id": 701,
+            "command_type": 7,
+            "failure_rate": 0,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 10,
+                "value": 25
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          },
+          {
+            "command_group_id": 0,
+            "command_id": 390,
+            "command_type": 3,
+            "failure_rate": 0,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 10,
+                "value": 15
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          },
+          {
+            "command_group_id": 0,
+            "command_id": 801,
+            "command_type": 8,
+            "failure_rate": 0,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 10,
+                "value": 40
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          }
+        ]
+      },
+      "race_condition_array": []
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "ftrackblazer_viewer"
+    }
+  },
+  "scenario": "trackblazer"
+}

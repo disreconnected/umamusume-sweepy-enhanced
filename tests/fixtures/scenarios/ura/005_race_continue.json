@@ -1,0 +1,55 @@
+{
+  "name": "005_race_continue",
+  "request": {
+    "endpoint": "single_mode_free/race_start",
+    "payload": {
+      "is_short": 1
+    }
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 2,
+        "power": 130,
+        "scenario_id": 1,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 36,
+        "vital": 50,
+        "wiz": 100
+      },
+      "home_info": {
+        "available_continue_num": 1,
+        "available_free_continue_num": 0,
+        "command_info_array": []
+      },
+      "race_start_info": {
+        "continue_num": 0,
+        "is_short": 1,
+        "program_id": 10102,
+        "race_horse_data": [
+          {
+            "frame_order": 5,
+            "viewer_id": "fura_viewer"
+          }
+        ],
+        "race_instance_id": "10102"
+      }
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "fura_viewer"
+    }
+  },
+  "scenario": "ura"
+}

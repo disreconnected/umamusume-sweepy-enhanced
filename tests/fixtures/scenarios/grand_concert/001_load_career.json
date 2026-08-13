@@ -1,0 +1,165 @@
+{
+  "name": "001_load_career",
+  "request": {
+    "endpoint": "single_mode_free/load",
+    "payload": {}
+  },
+  "response": {
+    "data": {
+      "chara_info": {
+        "card_id": 100101,
+        "chara_effect_id_array": [],
+        "evaluation_info_array": [
+          {
+            "evaluation": 78,
+            "is_outing": 0,
+            "story_step": 2,
+            "target_id": 1
+          }
+        ],
+        "fans": 500,
+        "guts": 90,
+        "max_vital": 100,
+        "motivation": 4,
+        "playing_state": 1,
+        "power": 130,
+        "scenario_id": 3,
+        "skill_array": [],
+        "skill_point": 320,
+        "skill_tips_array": [
+          {
+            "group_id": 20001,
+            "level": 2,
+            "rarity": 1
+          }
+        ],
+        "speed": 120,
+        "stamina": 110,
+        "turn": 12,
+        "vital": 60,
+        "wiz": 100
+      },
+      "concert_info": {
+        "grand_concert_ready": false,
+        "hype": 12,
+        "learned_song_count": 2,
+        "performance_point_array": [
+          {
+            "key": "speed",
+            "value": 30
+          },
+          {
+            "key": "stamina",
+            "value": 20
+          },
+          {
+            "key": "power",
+            "value": 25
+          },
+          {
+            "key": "guts",
+            "value": 10
+          },
+          {
+            "key": "wit",
+            "value": 15
+          }
+        ],
+        "promo_done": false,
+        "promo_program_id": 30101,
+        "promo_ready": false,
+        "song_array": [
+          {
+            "cost": 15,
+            "friendship_priority": true,
+            "name": "Friendship Song",
+            "skill_point_priority": true,
+            "song_id": 1
+          },
+          {
+            "cost": 10,
+            "friendship_priority": false,
+            "name": "Ballad",
+            "skill_point_priority": false,
+            "song_id": 2
+          }
+        ],
+        "songs_this_half": 2,
+        "technique_array": [
+          {
+            "cost": 20,
+            "deck_relevant": false,
+            "energy_recovery": 40,
+            "name": "Recovery Chorus",
+            "owned": false,
+            "technique_id": 1
+          },
+          {
+            "cost": 30,
+            "deck_relevant": true,
+            "energy_recovery": 0,
+            "name": "Speed Encore",
+            "owned": false,
+            "technique_id": 2
+          }
+        ]
+      },
+      "free_data_set": {
+        "coin_num": 0,
+        "item_effect_array": [],
+        "pick_up_item_info_array": [],
+        "rival_race_info_array": [],
+        "user_item_info_array": []
+      },
+      "home_info": {
+        "available_continue_num": 0,
+        "available_free_continue_num": 0,
+        "command_info_array": [
+          {
+            "command_group_id": 0,
+            "command_id": 101,
+            "command_type": 1,
+            "failure_rate": 12,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 1,
+                "value": 22
+              },
+              {
+                "target_type": 10,
+                "value": -10
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": [
+              1
+            ]
+          },
+          {
+            "command_group_id": 0,
+            "command_id": 701,
+            "command_type": 7,
+            "failure_rate": 0,
+            "is_enable": 1,
+            "params_inc_dec_info_array": [
+              {
+                "target_type": 10,
+                "value": 25
+              }
+            ],
+            "select_id": 0,
+            "tips_event_partner_array": [],
+            "training_partner_array": []
+          }
+        ]
+      }
+    },
+    "data_headers": {
+      "result_code": 1,
+      "viewer_id": "fgrand_concert_viewer"
+    }
+  },
+  "scenario": "grand_concert"
+}

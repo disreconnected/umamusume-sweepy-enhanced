@@ -1,1173 +1,609 @@
-import gzip
-import base64
-import msgpack
-import threading
-import time
+"""One serialized, manual "fast mode" career session.
+
+Replaces the autonomous ``CareerRunner`` thread loop. A single
+``threading.Lock`` covers load -> validate -> API call(s) -> normalize ->
+publish. Exactly one meaningful user decision executes per ``act()`` plus
+transport-only follow-through (forced events, noninteractive race
+presentation); any response presenting two or more choices, a shop/lesson/
+roster selection, clock use, or another resource-spending decision stops and
+returns control to the user. There is no background thread, no autoplay, and
+no dev/burn-clock mode.
+"""
+
+from __future__ import annotations
+
 import json
 import os
-import random
-import math
-from datetime import datetime
+import threading
+import time
 from pathlib import Path
 
-from career_bot.scenarios.mant import MantStrategy
+from career_bot.items import MantItemManager
 from career_bot.races import RacePlanner
+from career_bot.scenarios import base as scenario_base
+from career_bot.scenarios import grand_concert, trackblazer, unity, ura  # noqa: F401  import for adapter registration
+from career_bot.scenarios.base import has_multi_choice_event, is_unrecognized_blocking_state, parse_race_rank
+from career_bot.scenarios.registry import adapter_for_scenario
+from career_bot.scenarios.registry import registry as scenario_registry
 from career_bot.skills import SkillBuyer
-from career_bot.items import MantItemManager, ITEM_NAMES, SHOP_ITEM_COSTS, DISPLAY_TO_ID, display_to_slug
-
-
-from career_bot.report import new_report, add_event, add_api_call, add_decision, finish_report, write_report, set_error
-from career_bot.delay import dna_sleep, dna_gauss
-
-
-STRATEGIES = {
-    4: MantStrategy,
-}
 
 
 def runtime_output_root(base_dir):
     override = os.environ.get("UMA_RUNTIME_DIR")
     if override:
         return Path(override).expanduser().resolve()
-
     base = Path(base_dir).resolve()
     for candidate in (base, *base.parents):
         if (candidate / ".git").exists():
             return candidate / "uma_runtime"
     return base.parent / "uma_runtime"
 
-TRAINING_LABELS = {
-    101: "Speed",
-    102: "Power",
-    103: "Guts",
-    105: "Stamina",
-    106: "Wit",
-    601: "Speed",
-    602: "Stamina",
-    603: "Power",
-    604: "Guts",
-    605: "Wit",
-}
+
+class UpstreamGameError(Exception):
+    """A mutating call failed at the game server. The session reconciles via
+    load_career() and never blindly retries the mutation."""
 
 
-class CareerRunner:
+class ActionValidationError(Exception):
+    """Action absent or disabled in the authoritative catalog."""
+
+
+class ScenarioEndpointMissing(Exception):
+    """The captured manifest does not describe this scenario action; the
+    adapter fails closed."""
+
+
+class CareerSession:
     def __init__(self, base_dir):
         self.base_dir = Path(base_dir)
-        self.report = None
         self.lock = threading.Lock()
-        self.thread = None
-        self.stop_requested = False
-        self.burn_clocks = False
+        self.raw_state = None
+        self.normalized = None
+        self.revision = 0
+        self.preset = None
         self.race_planner = RacePlanner(base_dir)
         self.skill_buyer = SkillBuyer(base_dir)
         self.item_manager = MantItemManager()
-        self.consecutive_race_count = 0
-        self.status = {
-            "running": False,
-            "preset": "",
-            "scenario_id": 0,
-            "turn": 0,
-            "steps": 0,
-            "last_action": "",
-            "last_error": "",
-            "finished": False,
-            "skills_bought": 0,
-            "items_bought": 0,
-            "items_used": 0,
-            "clocks_used": 0,
-            "log": [],
-            "action_history": [],
-        }
 
-    def _init_debug_log(self, preset=None, scenario_id=4):
-        self.report = new_report(preset, scenario_id)
-
-    def _debug(self, event, state=None, data=None):
-        row = {
-            "event": event,
-        }
-        if state:
-            d = state.get("data") or {}
-            chara = d.get("chara_info") or {}
-            free = d.get("free_data_set") or {}
-            row["turn"] = int(chara.get("turn") or 0)
-            row["skill_point"] = int(chara.get("skill_point") or 0)
-            row["mant_coin"] = int(free.get("coin_num") if free.get("coin_num") is not None else free.get("gained_coin_num") or 0)
-            row["motivation"] = int(chara.get("motivation") or 0)
-            row["stats"] = self._turn_stats(chara)
-        if data:
-            row.update(data)
-        if self.report:
-            add_event(self.report, row)
-
-    def start(self, client, preset, initial_result, max_steps=2500, burn_clocks=False, dev_mode=False):        
+    # ------------------------------------------------------------------
+    # public API
+    # ------------------------------------------------------------------
+    def reset(self):
+        """Drop all session state (called on login/logout; a session belongs
+        to one account)."""
         with self.lock:
-            if self.status["running"]:
-                raise RuntimeError("Career runner already active")
-            scenario_id = int(preset.get("scenario_id") or 4)
-            strategy_cls = STRATEGIES.get(scenario_id)
-            if not strategy_cls:
-                raise RuntimeError(f"No runner for scenario {scenario_id}")
-            self.stop_requested = False
-            self.burn_clocks = burn_clocks
-            self.dev_mode = dev_mode
-            self.race_planner = RacePlanner(self.base_dir)
-            self.skill_buyer = SkillBuyer(self.base_dir)
-            self.item_manager = MantItemManager()
-            self.consecutive_race_count = 0
-            self.status = {
-                "running": True,
-                "preset": preset.get("name", ""),
-                "scenario_id": scenario_id,
-                "turn": 0,
-                "steps": 0,
-                "last_action": "started",
-                "last_error": "",
-                "finished": False,
-                "skills_bought": 0,
-                "items_bought": 0,
-                "items_used": 0,
-                "clocks_used": 0,
-                "log": [],
-                "action_history": [],
-            }
-            self.report = new_report(preset, scenario_id)
-            if client:
-                client.report = self.report
-                def _on_api_log(direction, ep, data, req_id=None):
-                    if self.report:
-                        import time
-                        add_api_call(self.report, {
-                            "ts": time.time(),
-                            "direction": direction,
-                            "endpoint": ep,
-                            "data": data,
-                            "req_id": req_id,
-                            "turn": self.status.get("turn", 0)
-                        })
-                client.on_api_log = _on_api_log
-            self._log_locked("started", 0, f"preset {preset.get('name', '')} (burn_clocks={burn_clocks})")
-            self.thread = threading.Thread(target=self._run, args=(client, preset, initial_result, strategy_cls(self.race_planner), max_steps), daemon=True)
-            self.thread.start()
+            self.raw_state = None
+            self.normalized = None
+            self.revision = 0
+            self.preset = None
 
-    def stop(self):
+    def load(self, client, preset=None):
+        """load_career(), recover blocked/minigame/race-running states,
+        normalize, and increment the revision once."""
         with self.lock:
-            self.stop_requested = True
+            self.preset = preset
+            try:
+                raw = client.load_career()
+            except Exception as exc:
+                raise UpstreamGameError(f"load_career failed: {exc}") from exc
+            raw = self._settle_transport(client, raw)
+            self._publish(raw, preset)
+            return self._snapshot_locked()
 
     def snapshot(self):
         with self.lock:
-            data = dict(self.status)
-            data["burn_clocks"] = self.burn_clocks
-            data["consecutive_race_count"] = self.consecutive_race_count
-            return data
+            return self._snapshot_locked()
 
-    def set_burn_clocks(self, value):
+    def act(self, client, action, expected_revision, selection=None):
+        """Execute exactly one meaningful decision plus transport-only
+        follow-through. Rejects stale revisions with a typed conflict."""
         with self.lock:
-            self.burn_clocks = value
-            self._log_locked("update_setting", 0, f"burn_clocks set to {value}")
+            if expected_revision is None or int(expected_revision) != self.revision:
+                return {
+                    "success": False,
+                    "error": "stale_revision",
+                    "state": self._snapshot_locked(),
+                }
+            catalog = {a["id"]: a for a in (self.normalized or {}).get("actions") or []}
+            entry = catalog.get(action.get("id") or "")
+            if entry is None:
+                return {"success": False, "error": "unknown_action", "detail": f"action {action.get('id')!r} not in the current catalog", "state": self._snapshot_locked()}
+            if not entry.get("enabled"):
+                return {"success": False, "error": "action_disabled", "detail": entry.get("disabled_reason") or "action disabled", "state": self._snapshot_locked()}
 
-    def _run(self, client, preset, result, strategy, max_steps):
-
-        state = result or {}
-        last_turn = -1
-        try:
-            for i in range(max_steps):
-                if self._should_stop():
-                    break
-                data = state.get("data") or {}
-                chara = data.get("chara_info") or {}
-                turn = int(chara.get("turn") or 0)
-
-                if turn != last_turn:
-                    if hasattr(client, "wait_turn_delay"):
-                        client.wait_turn_delay()
-                    last_turn = turn
-                
-                self._mark(turn=turn)
-                self._track_turn_scores(state)
-
-                if turn == 77 and not getattr(self, "dev_mode", False):
-                    print("Turn 77 reached terminating", flush=True)
-                    self.stop()
-                    break
-                
-                self.skill_buyer.last_attempt = []
-                self.skill_buyer.last_result = {}
-                self.item_manager.last_buy_attempt = []
-                self.item_manager.last_buy_result = {}
-                self.item_manager.last_use_attempt = []
-                self.item_manager.last_use_result = {}
-                self.skill_buyer.attempt_events = []
-                self.item_manager.buy_attempt_events = []
-                self.item_manager.use_attempt_events = []
-
-                if data.get("unchecked_event_array"):
-
-                    state = self._drain_events(client, strategy, state)
-                    data = state.get("data") or {}
-                    chara = data.get("chara_info") or {}
-                    self._track_turn_scores(state)
-                
-                if self._blocked_playing_state(chara):
-
-                    state = self._recover_blocked_state(client, strategy, state)
-                    data = state.get("data") or {}
-                    chara = data.get("chara_info") or {}
-                    if self._blocked_playing_state(chara):
-
-                        self._mark(last_action=f"blocked state {chara.get('playing_state')}")
-                        break
-                
-                self._debug_turn(state, preset)
-                if isinstance(state, dict):
-                    state["consecutive_race_count"] = self.consecutive_race_count
-                    if "data" in state and isinstance(state["data"], dict):
-                        state["data"]["consecutive_race_count"] = self.consecutive_race_count
-                decision = strategy.next_decision(state, preset)
-
-                
-                if self.report:
-                    add_decision(self.report, state, decision)
-                
-                if decision.action == "command":
-
-                    state = self._handle_items(client, state, preset, self._command_from_decision(state, decision))
-                    data = state.get("data") or {}
-                    if data.get("unchecked_event_array"):
-
-                        state = self._drain_events(client, strategy, state)
-                    data = state.get("data") or {}
-                    chara = data.get("chara_info") or {}
-                    self._mark(turn=chara["turn"])
-                    if isinstance(state, dict):
-                        state["consecutive_race_count"] = self.consecutive_race_count
-                        if "data" in state and isinstance(state["data"], dict):
-                            state["data"]["consecutive_race_count"] = self.consecutive_race_count
-                    decision = strategy.next_decision(state, preset)
-
-                    if self.report:
-                        add_decision(self.report, state, decision)
-                
-                self._log(decision.action, chara["turn"], decision.reason)
-                if decision.action == "idle":
-                    self._mark(last_action=decision.reason)
-                    break
-                if decision.action == "done":
-                    self._mark(last_action=decision.reason, finished=True)
-                    break
-                
-                if decision.action == "event":
-                    try:
-                        state = self._event(client, strategy, decision.payload)
-                    except Exception as exc:
-                        if "Network error" in str(exc) or "201" in str(exc) or "205" in str(exc) or "208" in str(exc):
-                            state = self._fresh_career_state(client, strategy)
-                            continue
-                        raise
-                elif decision.action == "command":
-                    self._log("command_exec", decision.payload["current_turn"], f"{decision.payload.get('command_type')}:{decision.payload.get('command_id')}:{decision.payload.get('command_group_id')}")
-                    self._record_action(decision, chara)
-                    try:
-                        state = client.exec_command(**decision.payload)
-                        self.consecutive_race_count = 0
-                        data = state.get("data") or {}
-                        if data.get("unchecked_event_array"):
-                            state = self._drain_events(client, strategy, state)
-                    except Exception as exc:
-                        if "Network error" in str(exc) or "201" in str(exc) or "205" in str(exc) or "208" in str(exc):
-                            state = self._fresh_career_state(client, strategy)
-                            continue
-                        if not any(err in str(exc) for err in ("102", "1503")):
-                            raise
-                        state = self._recover_blocked_state(client, strategy, state)
-                        data = state.get("data") or {}
-                        chara = data.get("chara_info") or {}
-                        if self._blocked_playing_state(chara):
-                            self._mark(last_action=f"blocked state {chara.get('playing_state')}")
-                            break
-                        continue
-                elif decision.action == "race":
-
-                    self._record_action(decision, chara)
-                    state = self._race(client, state, preset, decision.payload)
-                    self.consecutive_race_count += 1
-                elif decision.action == "race_progress":
-
-                    self._record_action(decision, chara)
-                    state = self._race_progress(client, decision.payload, preset)
-                    self.consecutive_race_count += 1
-                elif decision.action == "finish":
-
-                    self._record_action(decision, chara)
-
-                    # UG-AUTO-SKILL-BUY DISABLED: user reported the auto-picker was
-                    # buying suboptimal skills. Re-enable once we tighten the
-                    # selection logic in career_bot/skills.py. Tracked in
-                    # context.md §6.8. Reactivate by uncommenting the
-                    # `state = self._buy_skills(...)` lines flagged with the
-                    # same marker below.
-                    # state = self._buy_skills(client, state, preset, True)
-
-                    data = state.get("data") or {}
-                    if data.get("race_start_info"):
-                        self._log("race_out", decision.payload["current_turn"], "clearing active race")
-                        try:
-                            state = client.race_out(current_turn=decision.payload["current_turn"])
-                        except Exception as e:
-                            if any(err in str(e) for err in ("102", "201", "StateRecoveryError")):
-                                self._log("race_out_reconciled", decision.payload["current_turn"], f"graceful exit: {e}")
-                            else:
-                                raise
-                    state = self._drain_events(client, strategy, state, limit=50)
-
-                    chara = (state.get("data") or {}).get("chara_info") or {}
-                    if int(chara.get("skill_point") or 0) > 200:
-                        print(f"SP still high ({chara.get('skill_point')}); auto-buy is OFF — buy manually before confirming finish.")
-                        # UG-AUTO-SKILL-BUY DISABLED (see marker above).
-                        # state = self._buy_skills(client, state, preset, True)
-
-                    try:
-                        state = client.finish_career(current_turn=decision.payload["current_turn"], is_force_delete=False)
-                    except Exception as e:
-                        if any(err in str(e) for err in ("102", "201", "StateRecoveryError")):
-                            self._log("finish_reconciled", decision.payload["current_turn"], f"graceful exit: {e}")
-                        else:
-                            raise
-                    self._mark(last_action="finish", finished=True)
-                    break
-                else:
-
-                    self._mark(last_action=decision.action)
-                    break
-                
-                if decision.action not in {"finish"}:
-                    # UG-AUTO-SKILL-BUY DISABLED (see marker in finish branch).
-                    # Mid-career opportunistic purchases off until selection logic is tightened.
-                    # state = self._buy_skills(client, state, preset, False)
-                    pass
-
-                self._advance(decision.action)
-        except Exception as exc:
-            import traceback
-            trace_str = traceback.format_exc()
-            traceback.print_exc()
-            print(f"RUNNER CRASH: {exc}")
-            
-            crash_log_path = runtime_output_root(self.base_dir) / "crash_trace.txt"
+            adapter = self._current_adapter()
+            before = self._fingerprint(self.raw_state)
             try:
-                crash_log_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(crash_log_path, "a", encoding="utf-8") as f:
-                    f.write(f"--- CRASH AT {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
-                    f.write(trace_str)
-                    f.write("\n\n")
-            except Exception:
-                pass
-
-            self._log("error", self.snapshot().get("turn", 0), str(exc))
-            self._mark(last_error=str(exc))
-            if self.report:
-                set_error(self.report, exc)
-        finally:
-            if self._should_stop():
-                self._log("stop", self.snapshot().get("turn", 0), "stop requested")
-                if self.report:
-                    finish_report(self.report, "stopped")
-            else:
-                if self.report:
-                    finish_report(self.report, "finished" if self.status["finished"] else "error")
-            self._mark(running=False)
-            if self.report:
-                try:
-                    root_trace_dir = runtime_output_root(self.base_dir) / "bot_logs"
-                    out = write_report(self.report, root_trace_dir)
-                    print(f"career report written: {out}", flush=True)
-                except Exception as e:
-                    print(f"failed to write report: {e}", flush=True)
-
-    def _should_stop(self):
-        with self.lock:
-            return self.stop_requested
-
-    def _advance(self, action):
-        with self.lock:
-            self.status["steps"] += 1
-            self.status["last_action"] = action
-
-    def _mark(self, **values):
-        with self.lock:
-            self.status.update(values)
-
-    def _log_locked(self, action, turn, detail):
-        items = self.status.setdefault("log", [])
-        items.append({
-            "id": len(items) + 1,
-            "action": action,
-            "turn": int(turn or 0),
-            "detail": str(detail or ""),
-            "time": time.strftime("%H:%M:%S"),
-        })
-        if len(items) > 120:
-            del items[:len(items) - 120]
-
-    def _log(self, action, turn, detail):
-        with self.lock:
-            self._log_locked(action, turn, detail)
-
-    def _record_action(self, decision, chara=None):
-        payload = decision.payload or {}
-        action = decision.action
-        turn = int(payload["current_turn"])
-        stats = self._turn_stats(chara or {})
-        detail = self._format_turn_stats(stats) or str(decision.reason or "")
-        facility = ""
-        if action == "command":
-            command_type = int(payload.get("command_type") or 0)
-            command_id = int(payload.get("command_id") or 0)
-            command_group_id = int(payload.get("command_group_id") or 0)
-            if command_type == 1:
-                action = "train"
-                facility = TRAINING_LABELS.get(command_id, str(command_id))
-            elif command_type == 8:
-                action = "medic"
-            elif command_type == 7:
-                action = "rest"
-                facility = str(command_group_id or command_id)
-            elif command_type == 3:
-                action = "recreation"
-                facility = str(command_group_id or command_id)
-            else:
-                action = f"command {command_type}"
-                facility = str(command_id or command_group_id)
-        elif action in {"race", "race_progress"}:
-            action = "race"
-            program_id = int(payload.get("program_id") or 0)
-            if program_id and self.race_planner:
-                facility = self.race_planner.label(program_id)
-            else:
-                facility = str(program_id or "")
-        elif action == "finish":
-            action = "finish"
-        row = {
-            "turn": turn,
-            "action": action,
-            "facility": facility,
-            "detail": detail,
-            "stats": stats,
-            "time": time.strftime("%H:%M:%S"),
-        }
-        with self.lock:
-            history = self.status.setdefault("action_history", [])
-            if history and history[-1].get("turn") == row["turn"] and history[-1].get("action") == row["action"] and history[-1].get("facility") == row["facility"]:
-                history[-1] = row
-            else:
-                history.append(row)
-
-    def _turn_stats(self, chara):
-        if not chara:
-            return {}
-        return {
-            "hp": int(chara.get("vital") or 0),
-            "max_hp": int(chara.get("max_vital") or 100),
-            "motivation": int(chara.get("motivation") or 0),
-            "speed": int(chara.get("speed") or 0),
-            "stamina": int(chara.get("stamina") or 0),
-            "power": int(chara.get("power") or 0),
-            "guts": int(chara.get("guts") or 0),
-            "wit": int(chara.get("wiz") or 0),
-            "skill_point": int(chara.get("skill_point") or 0),
-        }
-
-    def _format_turn_stats(self, stats):
-        if not stats:
-            return ""
-        return (
-            f"HP {stats['hp']}/{stats['max_hp']} | "
-            f"MOOD {stats['motivation']} | "
-            f"SPD {stats['speed']} STA {stats['stamina']} PWR {stats['power']} "
-            f"GUT {stats['guts']} WIT {stats['wit']} SP {stats['skill_point']}"
-        )
-
-    def _blocked_playing_state(self, chara):
-        playing_state = int((chara or {}).get("playing_state") or 1)
-        return playing_state not in {1, 2, 3, 4, 5}
-
-    def _recover_blocked_state(self, client, strategy, state):
-        data = state.get("data") or {}
-        chara = data.get("chara_info") or {}
-        if int(chara.get("playing_state") or 0) == 6:
-            turn = chara.get("turn", 1)
-            if hasattr(client, "minigame_end"):
-                state = client.minigame_end(current_turn=turn)
-            else:
-                state = client.call("single_mode_free/minigame_end", {
-                    "result": {
-                        "result_state": 1,
-                        "result_value": 0,
-                        "result_detail_array": None,
-                    },
-                    "current_turn": turn,
-                })
-            data = state.get("data") or {}
-            if data.get("unchecked_event_array"):
-                state = self._drain_events(client, strategy, state)
-            return state
-        try:
-            if hasattr(client, "hard_reset"):
-                state = client.hard_reset()
-            else:
-                state = self._fresh_career_state(client, strategy)
-        except Exception as e:
-            print(f"Blocked State Recovery Failure: {e}")
-            return state
-        return state
-
-    def _debug_turn(self, state, preset):
-        data = state.get("data") or {}
-        chara = data.get("chara_info") or {}
-        free = data.get("free_data_set") or {}
-        self.skill_buyer.preview(state, preset)
-        self._debug("turn", state, {
-            "owned_skills": self._debug_owned_skills(state),
-            "inventory": self._debug_inventory(state),
-            "server_skill_tips_raw": chara.get("skill_tips_array") or [],
-            "server_owned_skill_raw": chara.get("skill_array") or [],
-            "skill_rows_enriched": self._debug_skill_options(state, preset),
-            "bot_skill_candidates": list(self.skill_buyer.last_candidates),
-            "bot_skill_selected": list(self.skill_buyer.last_selected),
-            "bot_skill_attempt": list(self.skill_buyer.last_attempt),
-            "bot_skill_result": dict(self.skill_buyer.last_result),
-            "server_shop_rows_raw": free.get("pick_up_item_info_array") or [],
-            "shop_rows_enriched": self._debug_item_buy_options(state, preset),
-            "bot_shop_candidates": list(self.item_manager.last_buy_options),
-            "bot_shop_selected": list(self.item_manager.last_buy_selected),
-            "bot_shop_attempt": list(self.item_manager.last_buy_attempt),
-            "bot_shop_result": dict(self.item_manager.last_buy_result),
-            "decision_item_use_rows": list(self.item_manager.last_use_options),
-            "bot_item_use_selected": list(self.item_manager.last_use_selected),
-            "bot_item_use_attempt": list(self.item_manager.last_use_attempt),
-            "bot_item_use_result": dict(self.item_manager.last_use_result),
-        })
-
-    def _debug_skill_options(self, state, preset):
-        data = state.get("data") or {}
-        chara = data.get("chara_info") or {}
-        points = int(chara.get("skill_point") or 0)
-        owned = {int(item.get("skill_id") or 0) for item in chara.get("skill_array") or []}
-        owned_groups = {self.skill_buyer.skill_to_group_id.get(skill_id, skill_id // 10) for skill_id in owned}
-        priority = self.skill_buyer._priority_context(preset)
-        blacklist = self.skill_buyer._blacklist(preset)
-        selected = {item["skill_id"]: item for item in self.skill_buyer._candidates(chara, preset)}
-        result = []
-        for tip in chara.get("skill_tips_array") or []:
-            resolved = self.skill_buyer.resolve_skill_tip(tip, owned, owned_groups, priority, blacklist, preset)
-            skill_id = int((resolved or {}).get("resolved_skill_id") or 0)
-            cost = int((resolved or {}).get("cost") or 0)
-            selected_flag = skill_id in selected
-            skip_reason = (resolved or {}).get("skip_reason")
-            if not skip_reason and cost > points:
-                skip_reason = "unaffordable"
-            elif not skip_reason and not selected_flag:
-                skip_reason = "rule_rejected"
-            result.append({
-                "skill_id": skill_id,
-                "group_id": int((resolved or {}).get("group_id") or tip.get("group_id") or 0),
-                "tip_rarity": int((resolved or {}).get("tip_rarity") or tip.get("rarity") or 0),
-                "hint_level": int((resolved or {}).get("hint_level") or tip.get("level") or 0),
-                "candidate_skill_ids": (resolved or {}).get("candidate_skill_ids") or [],
-                "name": (resolved or {}).get("resolved_name") or "",
-                "cost": cost,
-                "affordable": cost <= points,
-                "owned_group": (resolved or {}).get("skip_reason") == "owned_group",
-                "known": bool((resolved or {}).get("master_exists")),
-                "failed_scope": (resolved or {}).get("failed_scope"),
-                "selected": selected_flag,
-                "resolution_reason": (resolved or {}).get("resolution_reason") or "",
-                "skip_reason": skip_reason,
-            })
-        return result
-
-    def _debug_owned_skills(self, state):
-        chara = (state.get("data") or {}).get("chara_info") or {}
-        result = []
-        for row in chara.get("skill_array") or []:
-            skill_id = int(row.get("skill_id") or 0)
-            result.append({
-                "skill_id": skill_id,
-                "group_id": self.skill_buyer.skill_to_group_id.get(skill_id, skill_id // 10),
-                "name": self.skill_buyer.skill_names.get(skill_id, ""),
-            })
-        return result
-
-    def _debug_inventory(self, state):
-        free = (state.get("data") or {}).get("free_data_set") or {}
-        result = []
-        for name, count in sorted(self.item_manager._owned_map(free).items()):
-            item_id = DISPLAY_TO_ID.get(name)
-            if not item_id:
-                continue
-            result.append({
-                "name": name,
-                "item_id": item_id,
-                "current_num": int(count),
-                "failed_scope": "this_turn" if item_id in self.item_manager.failed_use_this_turn else None,
-            })
-        return result
-
-    def _debug_item_buy_options(self, state, preset):
-        data = state.get("data") or {}
-        free = data.get("free_data_set") or {}
-        current_turn = int((data.get("chara_info") or {}).get("turn") or 0)
-        coin_val = free.get("coin_num")
-        if coin_val is None:
-            coin_val = free.get("gained_coin_num")
-        budget = int(coin_val or 0)
-        owned = self.item_manager._owned_map(free)
-        result = []
-        for row in free.get("pick_up_item_info_array") or []:
-            shop_item_id = int(row.get("shop_item_id") or 0)
-            item_id = int(row.get("item_id") or 0)
-            name = ITEM_NAMES.get(item_id)
-            if not name:
-                continue
-            limit_turn = int(row.get("limit_turn") or 0)
-            cost = int(row.get("coin_num") or 0)
-            original_cost = int(row.get("original_coin_num") or cost)
-            bought = int(row.get("item_buy_num") or 0)
-            limit = int(row.get("limit_buy_count") or 1)
-            expired = limit_turn > 0 and current_turn > limit_turn
-            rejected = shop_item_id in self.item_manager.failed_exchange_this_snapshot
-            skip_buy = self.item_manager._skip_buy(name, owned, preset)
-            skip_reason = None
-            if expired:
-                skip_reason = "expired"
-            elif bought >= limit:
-                skip_reason = "limit_reached"
-            elif rejected:
-                skip_reason = "rejected"
-            elif skip_buy:
-                skip_reason = "skip_buy"
-            elif cost > budget:
-                skip_reason = "unaffordable"
-            result.append({
-                "shop_item_id": shop_item_id,
-                "item_id": item_id,
-                "name": name,
-                "cost": cost,
-                "original_cost": original_cost,
-                "mant_coin": budget,
-                "affordable": cost <= budget,
-                "current_num": bought,
-                "limit": limit,
-                "absolute_limit_turn": limit_turn,
-                "server_turn_delta": (limit_turn - current_turn) if limit_turn > 0 else None,
-                "ui_turns_left": None,
-                "limit_reached": bought >= limit,
-                "expired": expired,
-                "rejected": rejected,
-                "skip_buy": skip_buy,
-                "selected": False,
-                "skip_reason": skip_reason,
-            })
-        cfg = self.item_manager._mant_cfg(preset)
-        tiers = cfg.get("item_tiers") or {}
-        tier_count = int(cfg.get("tier_count") or 8)
-        remaining_budget = budget
-        for tier in range(1, tier_count + 1):
-            tier_rows = [
-                row for row in result
-                if row.get("skip_reason") is None
-                and not row.get("selected")
-                and int(tiers.get(display_to_slug(row.get("name")), 999)) == tier
-            ]
-            tier_rows.sort(key=lambda row: (int(row.get("absolute_limit_turn") or 99), int(row.get("cost") or 9999)))
-            for row in tier_rows:
-                cost = int(row.get("cost") or 0)
-                remaining = remaining_budget - cost
-                if remaining < 0:
-                    row["skip_reason"] = "unaffordable"
-                    continue
-                threshold = 0
-                thresholds = cfg.get("tier_thresholds") or {}
-                if tier > 1 and current_turn <= 64:
-                    threshold = int(thresholds.get(str(tier), thresholds.get(tier, (tier - 1) * 50)) or 0)
-                if threshold > 0 and remaining < threshold:
-                    row["skip_reason"] = "rule_rejected"
-                    continue
-                row["selected"] = True
-                remaining_budget = remaining
-        return result
-
-    def _api_result(self, result):
-        result = dict(result or {})
-        error = str(result.get("error") or "")
-        code = None
-        for token in error.replace(":", " ").replace(",", " ").split():
-            if token.isdigit():
-                value = int(token)
-                if value in {201, 202, 205, 208, 394, 709}:
-                    code = value
-                    break
-        if result.get("result") == "ok":
-            code = 1
-        return {
-            "ok": result.get("result") == "ok",
-            "result_code": code,
-            "error": error or None,
-        }
-
-    def _sum_cost(self, rows):
-        return sum(int((row or {}).get("cost") or 0) for row in rows or [])
-
-    def _shop_attempt_cost(self, attempt, selected):
-        costs = {int(row.get("shop_item_id") or 0): int(row.get("cost") or 0) for row in selected or []}
-        return sum(costs.get(int(row.get("shop_item_id") or 0), 0) for row in attempt or [])
-
-    def _fresh_career_state(self, client, strategy=None):
-        import time
-        errors = []
-        max_retries = 8
-        for attempt in range(max_retries):
-            relogin = attempt > 0
-            try:
-                if relogin:
-                    if not hasattr(client, "login"):
-                        break
-                    try:
-                        client.login()
-                    except Exception as e:
-                        if "Network error" in str(e) or "102" in str(e) or "201" in str(e) or "208" in str(e):
-                            raise e
-                        else:
-                            raise
-                if hasattr(client, "load_career"):
-                    state = client.load_career()
-                else:
-                    state = client.call("single_mode_free/load", {})
-                if strategy and (state.get("data") or {}).get("unchecked_event_array"):
-                    state = self._drain_events(client, strategy, state)
-                self.skill_buyer.reset_scoped_failures()
-                self.item_manager.reset_scoped_failures()
-                return state
+                raw = adapter.execute(self, client, entry, selection=selection)
+            except ActionValidationError as exc:
+                return {"success": False, "error": "invalid_selection", "detail": str(exc), "state": self._snapshot_locked()}
+            except ScenarioEndpointMissing as exc:
+                return {"success": False, "error": "not_captured", "detail": str(exc), "state": self._snapshot_locked()}
             except Exception as exc:
-                err_str = str(exc)
-                errors.append(err_str)
-                if attempt < max_retries - 1:
-                    dna_sleep(10, 10)
-        if hasattr(client, "hard_reset"):
-            return client.hard_reset()
-        raise RuntimeError("career recovery failed: " + " | ".join(errors[-2:]))
+                # upstream failure: reconcile, never blindly retry a mutation
+                return self._reconcile_failure(client, before, exc)
 
-    def _event(self, client, strategy, payload):
-        data = dict(payload)
-        event = data.pop("_event", None)
-        current_turn = data.pop("_current_turn", 0)
-        if event:
-            choice = strategy.choose_from_event(event, current_turn)
-            self._log("event_choice", current_turn, f"{data.get('event_id')} -> {choice}")
-            return client.check_event(
-                event_id=data["event_id"],
-                chara_id=event.get("chara_id", 0),
-                choice_number=choice,
-                current_turn=current_turn
+            raw = self._settle_transport(client, raw)
+            self._publish(raw, self.preset)
+            return {"success": True, "state": self._snapshot_locked()}
+
+    def finish(self, client, expected_revision):
+        with self.lock:
+            if expected_revision is None or int(expected_revision) != self.revision:
+                return {"success": False, "error": "stale_revision", "state": self._snapshot_locked()}
+            if (self.normalized or {}).get("phase") != "finish" and not (self.normalized or {}).get("can_finish"):
+                return {"success": False, "error": "not_finishable", "state": self._snapshot_locked()}
+            before = self._fingerprint(self.raw_state)
+            try:
+                raw = self.finish_career(client)
+            except Exception as exc:
+                return self._reconcile_failure(client, before, exc)
+            raw = self._settle_transport(client, raw)
+            self._publish(raw, self.preset)
+            return {"success": True, "state": self._snapshot_locked()}
+
+    def delete(self, client, expected_revision):
+        with self.lock:
+            if expected_revision is None or int(expected_revision) != self.revision:
+                return {"success": False, "error": "stale_revision", "state": self._snapshot_locked()}
+            try:
+                current_turn = self._turn_of(self.raw_state)
+                client.finish_career(current_turn=current_turn, is_force_delete=True)
+            except Exception as exc:
+                # after a force-delete there may be no career left to
+                # reconcile against; surface the failure with the old state
+                return {"success": False, "error": "upstream_failed", "detail": str(exc), "state": self._snapshot_locked()}
+            # delete success is terminal: never load_career() afterwards (the
+            # game has no active career). The route refreshes load/index.
+            self.raw_state = None
+            self.normalized = None
+            self.preset = None
+            self.revision += 1
+            return {"success": True, "state": self._empty_snapshot()}
+
+    # ------------------------------------------------------------------
+    # transitions (called by adapters; transport-only follow-through allowed)
+    # ------------------------------------------------------------------
+    def exec_command(self, client, payload):
+        payload = dict(payload or {})
+        if "current_vital" not in payload:
+            payload["current_vital"] = self._vital_of(self.raw_state)
+        if "current_turn" not in payload:
+            payload["current_turn"] = self._turn_of(self.raw_state)
+        try:
+            raw = client.exec_command(**payload)
+        except Exception as exc:
+            if any(err in str(exc) for err in ("102", "1503")):
+                raw = self._fresh_career_state(client)
+            else:
+                raise
+        return self.drain_forced_events(client, raw)
+
+    def submit_event(self, client, action):
+        payload = dict(action.get("payload") or {})
+        event_id = int(payload.get("event_id") or 0)
+        current_turn = int(payload.get("current_turn") or 0) or self._turn_of(self.raw_state)
+        try:
+            raw = client.check_event(
+                event_id=event_id,
+                chara_id=int(payload.get("chara_id") or 0),
+                choice_number=int(payload.get("choice_number") or 0),
+                current_turn=current_turn,
             )
-        if "event_id" not in data:
-            self._log("recover", current_turn, "event requested without event_id, forcing state refresh")
-            return self._fresh_career_state(client, strategy)
-        return client.check_event(**data)
+        except Exception as exc:
+            if any(err in str(exc) for err in ("Network error", "201", "205", "208")):
+                raw = self._fresh_career_state(client)
+            else:
+                raise
+        return self.drain_forced_events(client, raw)
 
-    def _drain_events(self, client, strategy, state, limit=20):
+    def drain_forced_events(self, client, state):
+        """Resolve zero/one-choice events automatically. A multi-choice event
+        stops the chain and returns control."""
         current = state
-        for _ in range(limit):
-            data = current.get("data") or {}
+        for _ in range(20):
+            data = (current or {}).get("data") or {}
             events = data.get("unchecked_event_array") or []
             if not events:
                 return current
+            if has_multi_choice_event(events):
+                return current
             event = events[0] or {}
-            choice = strategy._choice(event)
-            chara_turn = (data.get("chara_info") or {}).get("turn")
-            turn = chara_turn if chara_turn is not None else self.status["turn"]
-            payload = {"event_id": event.get("event_id"), "chara_id": event.get("chara_id", 0), "choice_number": choice, "current_turn": turn}
-            if choice is None:
-                payload = {"event_id": event.get("event_id"), "_event": event, "_current_turn": turn}
-            current = self._event(client, strategy, payload)
+            choice = 0
+            try:
+                current = client.check_event(
+                    event_id=int(event.get("event_id") or 0),
+                    chara_id=int(event.get("chara_id") or 0),
+                    choice_number=choice,
+                    current_turn=int((data.get("chara_info") or {}).get("turn") or 0),
+                )
+            except Exception as exc:
+                if any(err in str(exc) for err in ("Network error", "201", "205", "208")):
+                    return self._fresh_career_state(client)
+                raise
         return current
 
-    def _get_clocks_left(self, root, max_clocks=5):
-        data = root.get("data") or {}
-
-        home_info = data.get("home_info")
-        if isinstance(home_info, dict) and "available_continue_num" in home_info:
-            std = int(home_info.get("available_continue_num", 0))
-            free = int(home_info.get("available_free_continue_num", 0))
-            continue_type = 1 if free > 0 else 2
-            return {
-                "source": "data.home_info.available_continue_num",
-                "clocks_left": std + free,
-                "continue_type": continue_type,
-            }
-
-        race_start_info = data.get("race_start_info")
-        if isinstance(race_start_info, dict) and "continue_num" in race_start_info:
-            used = int(race_start_info["continue_num"])
-            return {
-                "source": "data.race_start_info.continue_num",
-                "clocks_used": used,
-                "clocks_left": max_clocks - used,
-                "continue_type": 2,
-            }
-
-        return {"source": "unknown", "clocks_left": 0, "continue_type": 2}
-
-    def _parse_race_rank(self, res):
-        import base64
-        import gzip
-        import struct
-
-        data = res.get("data", {})
-        headers = res.get("data_headers", {})
-        viewer_id = int(headers.get("viewer_id") or 0)
-
-        race_start_info = data.get("race_start_info", {})
-        horses = race_start_info.get("race_horse_data", [])
-
-        player = next((horse for horse in horses if int(horse.get("viewer_id") or 0) == viewer_id), None)
-        if not player:
-            return 99
-
-        frame_order = player.get("frame_order")
-        if not frame_order:
-            return 99
-
-        result_index = frame_order - 1
-
-        scenario_b64 = data.get("race_scenario")
-        if not scenario_b64:
-            return 99
-
-        try:
-            blob = gzip.decompress(base64.b64decode(scenario_b64))
-        except Exception:
-            return 99
-
-        offset = 0
-
-        if len(blob) < offset + 4: return 99
-        header_len = struct.unpack_from("<i", blob, offset)[0]
-        offset += 4 + header_len
-
-        if len(blob) < offset + 16: return 99
-        distance_diff_max, horse_num, horse_frame_size, horse_result_size = struct.unpack_from("<fiii", blob, offset)
-        offset += 16
-
-        if len(blob) < offset + 4: return 99
-        pad_len = struct.unpack_from("<i", blob, offset)[0]
-        offset += 4 + pad_len
-
-        if len(blob) < offset + 8: return 99
-        frame_count, frame_size = struct.unpack_from("<ii", blob, offset)
-        offset += 8 + frame_count * frame_size
-
-        if len(blob) < offset + 4: return 99
-        pad_len = struct.unpack_from("<i", blob, offset)[0]
-        offset += 4 + pad_len
-
-        if not (0 <= result_index < horse_num):
-            return 99
-
-        if len(blob) < offset + (result_index + 1) * horse_result_size:
-            return 99
-
-        finish_order = struct.unpack_from("<i", blob, offset + result_index * horse_result_size)[0]
-
-        return finish_order + 1
-
-    def _race(self, client, state, preset, payload):
-        if int((preset or {}).get("scenario_id") or (preset or {}).get("scenario") or 4) == 4:
-            self.item_manager.recover_after_use_error = False
-            state, used = self.item_manager.handle_pre_race(client, state, preset, payload, self.status, self.race_planner)
-            for event in self.item_manager.use_attempt_events:
-                self._debug("items_use_attempt", state, {
-                    "selected": event.get("selected") or [],
-                    "attempt": event.get("attempt") or [],
-                    "payload": event.get("payload") or [],
-                    "result": self._api_result(event.get("result") or {}),
-                })
-            if self.item_manager.recover_after_use_error:
-                state = self._fresh_career_state(client, payload.get("_strategy"))
-                self._debug_turn(state, preset)
-                return state
-            if used > 0:
-                with self.lock:
-                    self.status["items_used"] += used
-                    self._log_locked("items_use", payload["current_turn"], f"pre-race {used}")
-
-        program_id = payload.get("program_id")
-        current_turn = payload["current_turn"]
-        strategy = payload.get("_strategy")
-
-        running_style = preset.get("running_style") if isinstance(preset, dict) else None
-        try:
-            running_style = int(running_style)
-        except (TypeError, ValueError):
-            running_style = 0
-
+    def run_race(self, client, program_id, preset):
+        """race_entry -> (style fix) -> race_start -> rank. Rank 1 (or no
+        continue offered) chains race_end -> race_out; rank > 1 with a
+        continue offered stops in race_continue for the user."""
+        current_turn = self._turn_of(self.raw_state)
+        preset = preset or {}
         try:
             entry = client.race_entry(program_id=program_id, current_turn=current_turn)
         except Exception as exc:
-            print(f"Race Entry Error at turn {current_turn}: {exc}")
-            if not any(err in str(exc) for err in ("205", "208")):
-                raise
-            self.race_planner.reject(current_turn, program_id)
-            self._log("race_reject", current_turn, program_id)
-            return self._fresh_career_state(client, strategy)
-        self._log("race_entry", current_turn, program_id)
-        entry_data = entry.get("data") or {}
-        chara_info = entry_data.get("chara_info") or {}
-        if strategy:
-            if entry_data.get("unchecked_event_array"):
-                entry = self._drain_events(client, strategy, entry)
-                entry_data = entry.get("data") or {}
-                chara_info = entry_data.get("chara_info") or {}
+            if any(err in str(exc) for err in ("205", "208")):
+                self.race_planner.reject(current_turn, program_id)
+                return self._fresh_career_state(client)
+            raise
+        entry = self.drain_forced_events(client, entry)
+        self._apply_running_style(client, entry, program_id, preset)
+        res = client.race_start(is_short=1, current_turn=current_turn)
+        rank = parse_race_rank(res)
+        if rank > 1 and self._continue_offered(res) > 0:
+            res = self.drain_forced_events(client, res)
+            return res
+        return self._finish_race_transport(client, res, current_turn)
 
+    def race_continue(self, client, preset):
+        current_turn = self._turn_of(self.raw_state)
+        res = self.raw_state or {}
+        free = int(((res.get("data") or {}).get("home_info") or {}).get("available_free_continue_num") or 0)
+        std = int(((res.get("data") or {}).get("home_info") or {}).get("available_continue_num") or 0)
+        continue_type = 1 if free > 0 else 2
         try:
-            current_running_style = int(chara_info.get("race_running_style") or 0)
-        except (TypeError, ValueError):
-            current_running_style = 0
-        if running_style in (1, 2, 3, 4) and current_running_style != running_style:
-            entry = client.race_entry(
-                program_id=program_id,
-                current_turn=current_turn,
-                running_style=running_style,
-                retry_208=0,
-                retry_205=0,
+            cont = client.race_continue(current_turn=current_turn, continue_type=continue_type)
+        except Exception as exc:
+            if any(err in str(exc) for err in ("102", "1503", "201")):
+                return self._finish_race_transport(client, res, current_turn)
+            raise
+        cont = self.drain_forced_events(client, cont)
+        res2 = client.race_start(is_short=1, current_turn=current_turn)
+        rank = parse_race_rank(res2)
+        if rank > 1 and self._continue_offered(res2) > 0:
+            return self.drain_forced_events(client, res2)
+        return self._finish_race_transport(client, res2, current_turn)
+
+    def accept_race(self, client, preset):
+        current_turn = self._turn_of(self.raw_state)
+        return self._finish_race_transport(client, self.raw_state or {}, current_turn)
+
+    def resume_race(self, client, preset):
+        """Transport-only follow-through for a career that was loaded while a
+        race was already running (playing_state 2/3/4)."""
+        current_turn = self._turn_of(self.raw_state)
+        state = self.raw_state or {}
+        data = state.get("data") or {}
+        chara = data.get("chara_info") or {}
+        playing_state = int(chara.get("playing_state") or 1)
+        race = data.get("race_start_info") or {}
+        program_id = int(race.get("program_id") or 0)
+        preset = preset or {}
+        if playing_state in {2, 4} and program_id:
+            self._apply_running_style(client, state, program_id, preset)
+        res = client.race_start(is_short=1, current_turn=current_turn)
+        rank = parse_race_rank(res)
+        if rank > 1 and self._continue_offered(res) > 0:
+            return self.drain_forced_events(client, res)
+        return self._finish_race_transport(client, res, current_turn)
+
+    def exchange_items(self, client, payloads, current_turn):
+        state = self.raw_state or {}
+        current, bought, result = self._exchange(client, state, payloads, current_turn)
+        if not result.get("result") == "ok":
+            raise UpstreamGameError(f"item exchange rejected: {result.get('error') or result.get('skip')}")
+        return current
+
+    def use_items(self, client, payloads, current_turn):
+        state = self.raw_state or {}
+        current, used, result = self.item_manager.execute_use(client, state, payloads, current_turn)
+        if not result.get("result") == "ok":
+            raise UpstreamGameError(f"item use rejected: {result.get('error') or result.get('skip')}")
+        return current
+
+    def purchase_skills(self, client, selected_action_ids, current_turn):
+        if not selected_action_ids:
+            raise ActionValidationError("no skills selected")
+        skill_ids = []
+        for aid in selected_action_ids:
+            if not str(aid).startswith("skill:"):
+                raise ActionValidationError(f"not a skill action: {aid!r}")
+            skill_ids.append(int(str(aid).split(":", 1)[1]))
+        state = self.raw_state or {}
+        candidates = self.skill_buyer.candidates_for_ids(state, skill_ids, self.preset or {})
+        if len(candidates) != len(set(skill_ids)):
+            missing = set(skill_ids) - {c["skill_id"] for c in candidates}
+            raise ActionValidationError(f"skills not purchasable in current state: {sorted(missing)}")
+        new_state, bought = self.skill_buyer._buy_batch(client, state, candidates, current_turn)
+        if bought <= 0:
+            result = self.skill_buyer.last_result or {}
+            if result.get("result") == "failed":
+                raise UpstreamGameError(f"skill purchase failed: {result.get('error')}")
+            raise ActionValidationError(f"skill purchase rejected: {result.get('skip') or result}")
+        return new_state
+
+    def scenario_call(self, client, action_kind, payload, current_turn):
+        adapter = self._current_adapter()
+        endpoint = scenario_registry.endpoint_for(adapter.slug, action_kind)
+        if not endpoint:
+            raise ScenarioEndpointMissing(
+                f"{adapter.slug}/{action_kind} not captured in scenario-manifest.json"
             )
-        race_start_info = (entry.get("data") or {}).get("race_start_info") or {}
-        is_short = 1
-        res = client.race_start(is_short=is_short, current_turn=current_turn)
-        self._log("race_start", current_turn, f"short {is_short}")
+        call_payload = dict(payload or {})
+        call_payload["current_turn"] = current_turn
+        return client.call(endpoint, call_payload)
 
-        rank = self._parse_race_rank(res)
-        self._log("race_rank", current_turn, f"rank {rank}")
-
-        home_info = (state.get("data") or {}).get("home_info") or {}
-        std_clocks = int(home_info.get("available_continue_num", 0))
-        free_clocks = int(home_info.get("available_free_continue_num", 0))
-
-        while self.burn_clocks and rank > 1 and (std_clocks > 0 or free_clocks > 0):
-            clocks_left = std_clocks + free_clocks
-            continue_type = 1 if free_clocks > 0 else 2
-            
-            self._log("race_clock", current_turn, f"rank {rank}, using clock ({clocks_left} left, type {continue_type})...")
+    def finish_career(self, client):
+        current_turn = self._turn_of(self.raw_state)
+        state = self.raw_state or {}
+        data = (state or {}).get("data") or {}
+        if data.get("race_start_info"):
             try:
-                cont_res = client.race_continue(current_turn=current_turn, continue_type=continue_type)
-                
-                cont_data = cont_res.get("data") or {}
-                new_home_info = cont_data.get("home_info")
-                if isinstance(new_home_info, dict):
-                    std_clocks = int(new_home_info.get("available_continue_num", 0))
-                    free_clocks = int(new_home_info.get("available_free_continue_num", 0))
-                else:
-                    if free_clocks > 0:
-                        free_clocks -= 1
-                    else:
-                        std_clocks -= 1
+                client.race_out(current_turn=current_turn)
+            except Exception as exc:
+                if not any(err in str(exc) for err in ("102", "201", "StateRecoveryError")):
+                    raise
+        state = self.drain_forced_events(client, state)
+        if has_multi_choice_event(((state or {}).get("data") or {}).get("unchecked_event_array") or []):
+            return state
+        client.finish_career(current_turn=current_turn, is_force_delete=False)
+        return state
 
-                if strategy:
-                    if cont_data.get("unchecked_event_array"):
-                        self._drain_events(client, strategy, cont_res)
-                
-                roll = dna_gauss(0.166 + client.api_jitter, 0.05)
-                dna_sleep(0.1, 0.45, 0.166 + client.api_jitter, 0.05)
-                res = client.race_start(is_short=is_short, current_turn=current_turn)
-                rank = self._parse_race_rank(res)
-                self._log("race_rank_retry", current_turn, f"rank {rank} after clock")
-                with self.lock:
-                    self.status["clocks_used"] = int(self.status.get("clocks_used") or 0) + 1
-            except Exception as e:
-                self._log("race_clock_failed", current_turn, str(e))
+    # ------------------------------------------------------------------
+    # internals
+    # ------------------------------------------------------------------
+    def _current_adapter(self):
+        adapter = None
+        if self.raw_state is not None:
+            adapter = self._adapter_for(self.raw_state)
+        if adapter is None:
+            from career_bot.scenarios.base import UnsupportedAdapter
+            adapter = UnsupportedAdapter()
+        return adapter
+
+    def _adapter_for(self, raw):
+        data = (raw or {}).get("data") or {}
+        chara = data.get("chara_info") or data.get("single_mode_chara_light") or {}
+        scenario_id = int(chara.get("scenario_id") or 0)
+        return adapter_for_scenario(scenario_id)
+
+    def _publish(self, raw, preset):
+        adapter = self._adapter_for(raw)
+        context = {
+            "session": self,
+            "preset": preset,
+            "skill_buyer": self.skill_buyer,
+            "race_planner": self.race_planner,
+            "item_manager": self.item_manager,
+        }
+        if adapter is None:
+            from career_bot.scenarios.base import UnsupportedAdapter
+            adapter = UnsupportedAdapter()
+        normalized = adapter.normalize(raw, context)
+        self.revision += 1
+        normalized["revision"] = self.revision
+        normalized["actions"] = adapter.actions(raw, normalized)
+        normalized["recommendation"] = adapter.recommend(normalized, preset)
+        normalized.setdefault("scenario", {"id": 0, "slug": "unsupported", "name": "Unsupported"})
+        self.raw_state = raw
+        self.normalized = normalized
+        self.adapter = adapter
+
+    def _snapshot_locked(self):
+        import copy
+        snapshot = copy.deepcopy(self.normalized or {})
+        snapshot["revision"] = self.revision
+        return snapshot
+
+    def _empty_snapshot(self):
+        """PlayState envelope for a session with no active career (e.g. after
+        a force-delete)."""
+        return {
+            "revision": self.revision,
+            "scenario": {"id": 0, "slug": "unsupported", "name": "Unsupported"},
+            "phase": "unsupported",
+            "turn": 0,
+            "playing_state": 1,
+            "trainee": {},
+            "stats": {},
+            "energy": {},
+            "motivation": 0,
+            "skill_points": 0,
+            "fans": 0,
+            "conditions": [],
+            "support_bonds": [],
+            "commands": [],
+            "events": [],
+            "race": None,
+            "inventory": [],
+            "skills": {"owned": [], "options": [], "remaining_sp": 0},
+            "scenario_state": {},
+            "actions": [],
+            "recommendation": None,
+            "can_finish": False,
+            "error": "no active career",
+        }
+
+    def _settle_transport(self, client, raw):
+        """Auto-resolve transport-only states: minigame, blocked state, and a
+        race already running on load. Stops at continue-offered / multi-choice
+        events / finish."""
+        data = (raw or {}).get("data") or {}
+        chara = data.get("chara_info") or {}
+        playing_state = int(chara.get("playing_state") or 1)
+        for _ in range(4):
+            data = (raw or {}).get("data") or {}
+            chara = data.get("chara_info") or {}
+            playing_state = int(chara.get("playing_state") or 1)
+            events = data.get("unchecked_event_array") or []
+            if events and has_multi_choice_event(events):
+                return raw
+            if "single_mode_finish_common" in data or int(chara.get("state") or 0) == 3:
+                return raw
+            if playing_state == 6:
+                raw = self._minigame_end(client, raw)
+                continue
+            if is_unrecognized_blocking_state(chara):
+                raw = self._fresh_career_state(client)
+                continue
+            if playing_state in {2, 3, 4}:
+                home_info = data.get("home_info") or {}
+                race = data.get("race_start_info") or {}
+                offered = int(home_info.get("available_continue_num") or 0) + int(home_info.get("available_free_continue_num") or 0)
+                if offered <= 0:
+                    offered = int(race.get("available_continue_num") or 0) + int(race.get("available_free_continue_num") or 0)
+                if offered > 0 and parse_race_rank(raw) > 1:
+                    # a continue decision belongs to the user, never to transport
+                    return raw
+                raw = self.resume_race(client, None)
+                continue
+            if events:
+                raw = self.drain_forced_events(client, raw)
+                continue
+            return raw
+        return raw
+
+    def _minigame_end(self, client, state):
+        current_turn = self._turn_of(state)
+        try:
+            state = client.minigame_end(current_turn=current_turn)
+        except Exception:
+            state = client.call("single_mode_free/minigame_end", {
+                "result": {"result_state": 1, "result_value": 0, "result_detail_array": None},
+                "current_turn": current_turn,
+            })
+        return self.drain_forced_events(client, state)
+
+    def _fresh_career_state(self, client):
+        """load_career with bounded relogin retries; used for blocked-state
+        recovery and upstream reconciliation."""
+        errors = []
+        for attempt in range(4):
+            try:
+                return client.load_career()
+            except Exception as exc:
+                err = str(exc)
+                errors.append(err)
+                if any(code in err for code in ("102", "201", "208", "Network error")):
+                    if attempt < 3:
+                        try:
+                            client.login()
+                        except Exception:
+                            pass
+                        continue
+                if attempt < 3:
+                    time.sleep(1.0)
+                    continue
                 break
+        raise UpstreamGameError("career recovery failed: " + " | ".join(errors[-2:]))
 
-        if strategy:
-            res_data = res.get("data") or {}
-            if res_data.get("unchecked_event_array"):
-                res = self._drain_events(client, strategy, res)
-
-        out = res
+    def _reconcile_failure(self, client, before, exc):
+        """After an upstream mutation failure, load the fresh career state. If
+        the action committed, publish it; otherwise publish the refreshed old
+        state with a typed error. Never blindly retry the mutation."""
         try:
-            client.race_end(current_turn=current_turn)
-            self._log("race_end", current_turn, "")
-        except Exception as e:
-            if any(err in str(e) for err in ("102", "1503")):
-                self._log("race_end_reconciled", current_turn, "server already done (102)")
-            else:
-                raise
-
-        try:
-            out_res = client.race_out(current_turn=current_turn)
-            out = out_res
-            if strategy:
-                out_data = out.get("data") or {}
-                if out_data.get("unchecked_event_array"):
-                    out = self._drain_events(client, strategy, out)
-        except Exception as e:
-            if any(err in str(e) for err in ("102", "1503")):
-                self._log("race_out_reconciled", current_turn, "server already done (102)")
-            else:
-                raise
-
-        return out
-
-    def _race_progress(self, client, payload, preset=None):
-        current_turn = payload["current_turn"]
-        phase = payload.get("phase")
-        chara = (payload.get("chara_info") or {})
-        playing_state = chara.get("playing_state") or 0
-        if playing_state not in {2, 3, 4, 5}:
-            self._log("race_skip", current_turn, f"not in race (state={playing_state})")
-            return payload
-        
-        if phase == "end":
-            if playing_state in {1}:
-                self._log("race_end_skip", current_turn, "resume already home")
-            else:
-                try:
-                    client.race_end(current_turn=current_turn)
-                    self._log("race_end", current_turn, "resume")
-                except Exception as e:
-                    if any(err in str(e) for err in ("102", "1503")):
-                        self._log("race_end_reconciled", current_turn, "resume already done (102)")
-                    else:
-                        raise
+            fresh = client.load_career()
+        except Exception:
+            fresh = None
+        if fresh is not None and self._fingerprint(fresh) != before:
+            fresh = self._settle_transport(client, fresh)
+            self._publish(fresh, self.preset)
+            return {"success": False, "error": "upstream_failed_committed", "detail": str(exc), "state": self._snapshot_locked()}
+        if fresh is not None:
             try:
-                return client.race_out(current_turn=current_turn)
-            except Exception as e:
-                if any(err in str(e) for err in ("102", "1503", "201", "StateRecoveryError")):
-                    self._log("race_out_reconciled", current_turn, f"graceful exit: {e}")
-                    return payload
-                raise
-        if phase == "out":
-            self._log("race_out", current_turn, "resume")
-            try:
-                return client.race_out(current_turn=current_turn)
-            except Exception as e:
-                if any(err in str(e) for err in ("102", "1503", "201", "StateRecoveryError")):
-                    self._log("race_out_reconciled", current_turn, f"graceful exit: {e}")
-                    return payload
-                raise
-        race_start_info = payload.get("race_start_info") or {}
-        program_id = race_start_info.get("program_id")
-        running_style = preset.get("running_style") if isinstance(preset, dict) else None
+                fresh = self._settle_transport(client, fresh)
+                self._publish(fresh, self.preset)
+            except Exception:
+                pass
+        return {"success": False, "error": "upstream_failed", "detail": str(exc), "state": self._snapshot_locked()}
+
+    def _apply_running_style(self, client, state, program_id, preset):
+        running_style = preset.get("running_style")
         try:
             running_style = int(running_style)
         except (TypeError, ValueError):
             running_style = 0
-        horse = ((race_start_info.get("race_horse_data") or []) + [{}])[0]
+        if running_style not in (1, 2, 3, 4):
+            return
+        chara = ((state or {}).get("data") or {}).get("chara_info") or {}
+        horse = ((((state or {}).get("data") or {}).get("race_start_info") or {}).get("race_horse_data") or [{}])[0]
         try:
-            current_running_style = int(chara.get("race_running_style") or horse.get("running_style") or 0)
+            current = int(chara.get("race_running_style") or horse.get("running_style") or 0)
         except (TypeError, ValueError):
-            current_running_style = 0
-        if playing_state in {2, 4} and program_id and running_style in (1, 2, 3, 4) and current_running_style != running_style:
-            client.race_entry(
-                program_id=program_id,
-                current_turn=current_turn,
-                running_style=running_style,
-                retry_208=0,
-                retry_205=0,
-            )
-        client.race_start(is_short=1, current_turn=current_turn)
-        self._log("race_start", current_turn, "resume")
-        if playing_state in {1}:
-            self._log("race_end_skip", current_turn, "resume already home")
-        else:
-            try:
-                client.race_end(current_turn=current_turn)
-                self._log("race_end", current_turn, "resume")
-            except Exception as e:
-                if any(err in str(e) for err in ("102", "1503")):
-                    self._log("race_end_reconciled", current_turn, "resume already done (102)")
-                else:
-                    raise
+            current = 0
+        if current != running_style:
+            client.race_entry(program_id=program_id, current_turn=self._turn_of(state), running_style=running_style, retry_208=0, retry_205=0)
+
+    def _finish_race_transport(self, client, res, current_turn):
         try:
-            return client.race_out(current_turn=current_turn)
-        except Exception as e:
-            if any(err in str(e) for err in ("102", "1503", "201", "StateRecoveryError")):
-                self._log("race_out_reconciled", current_turn, f"graceful exit: {e}")
-                return payload
-            raise
+            client.race_end(current_turn=current_turn)
+        except Exception as exc:
+            if not any(err in str(exc) for err in ("102", "1503")):
+                raise
+        out = res
+        try:
+            out = client.race_out(current_turn=current_turn)
+        except Exception as exc:
+            if not any(err in str(exc) for err in ("102", "1503", "201")):
+                raise
+        return self.drain_forced_events(client, out)
 
-    def _buy_skills(self, client, state, preset, force):
-        self.skill_buyer.recover_after_error = False
-        state, bought = self.skill_buyer.buy(client, state, preset, force)
-        for event in self.skill_buyer.attempt_events:
-            self._debug("skills_attempt", state, {
-                "selected": event.get("selected") or [],
-                "attempt": event.get("attempt") or [],
-                "selected_total_cost": self._sum_cost(event.get("selected") or []),
-                "attempt_total_cost": self._sum_cost(event.get("attempt") or []),
-                "payload": event.get("payload") or [],
-                "result": self._api_result(event.get("result") or {}),
+    def _continue_offered(self, res):
+        data = (res or {}).get("data") or {}
+        home = data.get("home_info") or {}
+        std = int(home.get("available_continue_num") or 0)
+        free = int(home.get("available_free_continue_num") or 0)
+        if std + free > 0:
+            return std + free
+        race = data.get("race_start_info") or {}
+        return int(race.get("available_continue_num") or 0) + int(race.get("available_free_continue_num") or 0)
+
+    def _exchange(self, client, state, payloads, current_turn):
+        data = state.get("data") or {}
+        free = data.get("free_data_set") or {}
+        budget = int(free.get("coin_num") or free.get("gained_coin_num") or 0)
+        valid_rows = {int(row.get("shop_item_id") or 0): row for row in free.get("pick_up_item_info_array") or []}
+        owned_by_id = {}
+        for row in free.get("user_item_info_array") or []:
+            owned_by_id[int(row.get("item_id") or 0)] = int(row.get("num") or row.get("current_num") or row.get("item_num") or 0)
+        payload = []
+        total_cost = 0
+        for item in payloads or []:
+            shop_item_id = int(item.get("shop_item_id") or 0)
+            if shop_item_id <= 0:
+                continue
+            row = valid_rows.get(shop_item_id)
+            if not row:
+                continue
+            cost = int(row.get("coin_num") or 0)
+            limit_turn = int(row.get("limit_turn") or 0)
+            if limit_turn > 0 and limit_turn < current_turn:
+                continue
+            if int(row.get("item_buy_num") or 0) >= int(row.get("limit_buy_count") or 1):
+                continue
+            if total_cost + cost > budget:
+                continue
+            total_cost += cost
+            payload.append({
+                "shop_item_id": shop_item_id,
+                "current_num": owned_by_id.get(int(row.get("item_id") or 0), 0),
             })
-        if self.skill_buyer.recover_after_error:
-            try:
-                state = self._fresh_career_state(client)
-                self._debug_turn(state, preset)
-            except Exception as e:
-                print(f"Skill phase reload failure: {e}")
-                pass
-        if bought:
-            with self.lock:
-                self.status["skills_bought"] += bought
-                self.status["last_action"] = f"skills {bought}"
-                self._log_locked("skills", (state.get("data") or {}).get("chara_info", {}).get("turn", 0), bought)
-        return state
+        if not payload:
+            return state, 0, {"result": "skip", "skip": "preflight_failed"}
+        try:
+            result = client.exchange_items(payload, current_turn)
+        except Exception as exc:
+            return state, 0, {"result": "failed", "error": str(exc), "payload": payload}
+        merged = self._merge_raw(state, result)
+        return merged, len(payload), {"result": "ok", "payload": payload}
 
-    def _handle_items(self, client, state, preset, best_command):
-        if int((preset or {}).get("scenario_id") or (preset or {}).get("scenario") or 4) != 4:
+    def _merge_raw(self, state, res):
+        if not res or not isinstance(res, dict) or "data" not in res:
             return state
-        self.item_manager.recover_after_exchange_error = False
-        self.item_manager.recover_after_use_error = False
-        state, bought, used = self.item_manager.handle(client, state, preset, best_command, self.status, self.race_planner)
-        for event in self.item_manager.buy_attempt_events:
-            self._debug("items_buy_attempt", state, {
-                "selected": event.get("selected") or [],
-                "attempt": event.get("attempt") or [],
-                "selected_total_cost": self._sum_cost(event.get("selected") or []),
-                "attempt_total_cost": self._shop_attempt_cost(event.get("attempt") or [], event.get("selected") or []),
-                "payload": event.get("payload") or [],
-                "result": self._api_result(event.get("result") or {}),
-            })
-        for event in self.item_manager.use_attempt_events:
-            self._debug("items_use_attempt", state, {
-                "selected": event.get("selected") or [],
-                "attempt": event.get("attempt") or [],
-                "payload": event.get("payload") or [],
-                "result": self._api_result(event.get("result") or {}),
-            })
-        if self.item_manager.recover_after_exchange_error or self.item_manager.recover_after_use_error:
-            try:
-                state = self._fresh_career_state(client)
-                self._debug_turn(state, preset)
-            except Exception as e:
-                print(f"Item phase reload failure: {e}")
-                pass
-        if bought or used:
-            turn = (state.get("data") or {}).get("chara_info", {}).get("turn", 0)
-            with self.lock:
-                self.status["items_bought"] += bought
-                self.status["items_used"] += used
-                if bought:
-                    self._log_locked("items_buy", turn, bought)
-                if used:
-                    self._log_locked("items_use", turn, used)
-        return state
-
-    def _merge_state(self, old_state, new_state):
-        if not old_state:
-            return new_state
-        merged = dict(old_state)
-        merged["data"] = dict(old_state.get("data") or {})
-        for k, v in (new_state.get("data") or {}).items():
-            if isinstance(v, dict) and k in merged["data"] and isinstance(merged["data"][k], dict):
+        merged = dict(state or {})
+        merged["data"] = dict((state or {}).get("data") or {})
+        for k, v in (res.get("data") or {}).items():
+            if isinstance(v, dict) and isinstance(merged["data"].get(k), dict):
                 merged_sub = dict(merged["data"][k])
                 for sub_k, sub_v in v.items():
                     if sub_v is not None:
@@ -1177,42 +613,24 @@ class CareerRunner:
                 merged["data"][k] = v
         return merged
 
-    def _command_from_decision(self, state, decision):
-        payload = decision.payload or {}
-        command_type = int(payload["command_type"])
-        command_id = int(payload["command_id"])
-        command_group_id = int(payload.get("command_group_id", 0))
-        for cmd in ((state.get("data") or {}).get("home_info") or {}).get("command_info_array") or []:
-            if int(cmd.get("command_type") or 0) != command_type:
-                continue
-            if command_type == 3 and int(cmd.get("command_id") or 0) == command_group_id:
-                return cmd
-            if int(cmd.get("command_id") or 0) == command_id:
-                return cmd
-        return payload
-
-    def _track_turn_scores(self, state):
-        data = state.get("data") or {}
+    def _fingerprint(self, raw):
+        data = (raw or {}).get("data") or {}
         chara = data.get("chara_info") or {}
-        turn = int(chara.get("turn") or 0)
-        home = data.get("home_info") or {}
-        commands = home.get("command_info_array") or []
-        max_score = 0
-        has_training = False
-        for cmd in commands:
-            if int(cmd.get("command_type") or 0) == 1:
-                has_training = True
-                score = self.item_manager._command_stat_gain(cmd)
-                if score > max_score:
-                    max_score = score
-        if has_training:
-            with self.lock:
-                dh = self.status.setdefault("date_history", [])
-                sh = self.status.setdefault("score_history", [])
-                if not dh or dh[-1] != turn:
-                    dh.append(turn)
-                    sh.append(max_score)
-                    if len(dh) > 48:
-                        dh.pop(0)
-                        sh.pop(0)
+        return json.dumps({
+            "turn": int(chara.get("turn") or 0),
+            "playing_state": int(chara.get("playing_state") or 1),
+            "vital": int(chara.get("vital") or 0),
+            "skill_point": int(chara.get("skill_point") or 0),
+            "fans": int(chara.get("fans") or 0),
+            "motivation": int(chara.get("motivation") or 0),
+        }, sort_keys=True)
 
+    def _turn_of(self, raw):
+        data = (raw or {}).get("data") or {}
+        chara = data.get("chara_info") or data.get("single_mode_chara_light") or {}
+        return int(chara.get("turn") or 0)
+
+    def _vital_of(self, raw):
+        data = (raw or {}).get("data") or {}
+        chara = data.get("chara_info") or {}
+        return int(chara.get("vital") or 0)
